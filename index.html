@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8" />
+  <title>Web年賀状</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+  <link rel="stylesheet" href="nenga.css" />
+  <link rel="stylesheet" href="https://unpkg.com/cropperjs@1.6.2/dist/cropper.min.css">
+</head>
+<body>
+  <!-- カード表示 -->
+  <div id="card-container" aria-label="クリック / Enter / Space で裏表反転">
+    <div id="card" class="new-year-card" role="button" tabindex="0" aria-pressed="false">
+      <!-- 表：住所面 -->
+      <section class="side address-side">
+        <img class="stamp" src="./images/kitte.png" alt="切手" />
+        <div class="postal-code">〒□□□-□□□□</div>
+        <div class="address">宛名&nbsp;太郎&nbsp;様</div>
+        <div class="sender">土井&nbsp;仰輝</div>
+
+        <!-- ▼ TCGホバー演出（表） -->
+        <div class="card-wrapper" aria-hidden="true">
+          <div class="pattern"></div>
+          <div class="color"></div>
+          <div class="highlight"></div>
+        </div>
+      </section>
+
+      <!-- 裏：挨拶面 -->
+      <section class="side greeting-side">
+        <h1></h1>
+        <img class="new-year-image" src="./images/new-year-image.png" alt="新年イメージ" />
+        <p>謹んで新春のお慶びを申し上げます。<br>旧年中は格別のご高配を賜り厚く御礼申し上げます。<br>本年もご期待に沿えるよう精進してまいります。</p>
+
+        <!-- ▼ TCGホバー演出（裏） -->
+        <div class="card-wrapper" aria-hidden="true">
+          <div class="pattern"></div>
+          <div class="color"></div>
+          <div class="highlight"></div>
+        </div>
+      </section>
+    </div>
+  </div>
+
+  <!-- 編集UI -->
+  <button id="editor-open" aria-label="編集を開く">編集</button>
+  <div id="editor-overlay" aria-hidden="true">
+    <div class="editor-panel" role="dialog" aria-modal="true" aria-labelledby="editor-title">
+      <div class="editor-header">
+        <h2 id="editor-title">Web年賀状エディタ</h2>
+        <button id="editor-close" aria-label="閉じる">×</button>
+      </div>
+
+      <div class="editor-body grid2" id="editor-scroll">
+        <!-- 左：テキスト（CSVモード時は非表示） -->
+        <section class="group" id="panel-text">
+          <h3 class="group-title">テキスト</h3>
+
+          <label class="stack">
+            <span class="label">
+              宛名
+              <!-- 敬称の“上”にCSVモード切替 -->
+              <button id="btn-csv-mode" type="button" class="ghost small" title="CSV一括生成モードを開く" aria-pressed="false">CSVモード</button>
+            </span>
+            <div class="row">
+              <textarea id="inp-address" class="samebox" rows="3" placeholder="例）宛名 太郎"></textarea>
+              <select id="inp-honorific" title="敬称">
+                <option value="様">様</option>
+                <option value="殿">殿</option>
+                <option value="君">君</option>
+                <option value="御中">御中</option>
+                <option value="">—（なし）</option>
+              </select>
+            </div>
+          </label>
+
+          <label class="stack">
+            <span class="label">差出人</span>
+            <textarea id="inp-sender" class="samebox" rows="3" placeholder="例）差出 次郎"></textarea>
+          </label>
+
+          <div class="stack">
+            <div class="row wrap">
+              <label class="stack flex-1">
+                <span class="label">挨拶文テンプレート</span>
+                <div class="row">
+                  <select id="sel-message-template" title="挨拶文テンプレート"></select>
+                </div>
+                <div class="hint">※ テンプレを選ぶと下の本文に即反映。本文は自由に編集できます。</div>
+              </label>
+            </div>
+
+            <label class="stack">
+              <span class="label">挨拶文（改行可）</span>
+              <textarea id="inp-message" rows="5" placeholder="例）旧年中は大変お世話になりました。&#10;本年もよろしくお願いします。"></textarea>
+            </label>
+          </div>
+
+          <fieldset class="options">
+            <legend>表示オプション</legend>
+            <label class="inline">
+              <input id="chk-photo" type="checkbox" checked />
+              "謹賀新年"表示
+            </label>
+            <label class="inline">
+              <input id="chk-msgbg" type="checkbox" checked />
+              挨拶文の背景色（白半透明）を有効
+            </label>
+          </fieldset>
+
+          <p class="valid-note">※ 宛名と差出人は必須です（空欄不可）。</p>
+        </section>
+
+        <!-- 右：背景（サンプル／アップロード＆トリミング） -->
+        <section class="group">
+          <h3 class="group-title">背景</h3>
+
+          <div class="sample-wrap">
+            <div class="sample-grid" id="sample-grid">
+              <button type="button" class="sample" data-src="./images/background_sample1.png" aria-label="サンプル1">
+                <img src="./images/background_sample1.png" alt="sample1">
+              </button>
+              <button type="button" class="sample" data-src="./images/background_sample2.png" aria-label="サンプル2">
+                <img src="./images/background_sample2.png" alt="sample2">
+              </button>
+              <button type="button" class="sample" data-src="./images/background_sample3.png" aria-label="サンプル3">
+                <img src="./images/background_sample3.png" alt="sample3">
+              </button>
+              <button type="button" class="sample" data-src="./images/background_sample4.png" aria-label="サンプル4">
+                <img src="./images/background_sample4.png" alt="sample4">
+              </button>
+              <button type="button" class="sample" data-src="./images/background_sample5.png" aria-label="サンプル5">
+                <img src="./images/background_sample5.png" alt="sample5">
+              </button>
+            </div>
+            <div class="hint">サンプルをクリックで即適用／共有リンクにも反映されます。</div>
+          </div>
+
+          <hr class="sep"/>
+
+          <div class="uploader">
+            <input id="inp-bgfile" type="file" accept="image/*" />
+            <div id="cropper" aria-hidden="true">
+              <div class="cropper-wrap">
+                <img id="crop-img" alt="トリミング対象" />
+              </div>
+              <div class="crop-controls">
+                <button id="btn-crop-reset" type="button">リセット</button>
+                <button id="btn-crop-apply" type="button" class="primary">トリミング適用</button>
+              </div>
+              <div class="hint">画像をドラッグで位置調整、ピンチ／ホイールでズームできます。</div>
+            </div>
+          </div>
+        </section>
+
+        <!-- CSV一括生成パネル（ファイルインポート） -->
+        <section class="group" id="csv-panel" style="grid-column: 1 / -1; display:none;">
+          <h3 class="group-title">CSV一括URL生成</h3>
+          <p class="hint">
+            A=宛名 / B=敬称コード / C=差出 / D=挨拶文 / E=「謹賀新年」表示(0/1) / F=挨拶文背景(0/1)<br/>
+            ※ 敬称コード → 0:様, 1:殿, 2:君, 3:御中, 4:(-)なし
+          </p>
+
+          <div class="row wrap">
+            <input id="csv-file" type="file" accept=".csv,text/csv" />
+            <button id="csv-generate" class="primary" disabled>URL生成してCSVダウンロード</button>
+            <!-- ▼ CSVモードから標準モードに戻るボタン -->
+            <button id="csv-exit" type="button" class="ghost">標準モードに戻る</button>
+          </div>
+
+          <div class="hint" id="csv-summary">CSV未選択</div>
+
+          <label class="stack" style="margin-top:10px;">
+            <span class="label">プレビュー（先頭数行）</span>
+            <textarea id="csv-preview" rows="6" readonly></textarea>
+          </label>
+        </section>
+      </div>
+
+      <!-- 標準モード専用：URLコピー欄（CSVモード時は非表示にする） -->
+      <div class="editor-actions" id="editor-actions">
+        <input id="share-url" type="text" readonly placeholder="生成された短いURL（自動更新）" />
+        <button id="btn-copy" class="primary" title="URLをコピー">URLをコピー</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- トースト／ビジー -->
+  <div id="toast" aria-live="polite" aria-atomic="true"></div>
+  <div id="busy" aria-hidden="true"><div class="spinner" role="status"></div><div class="busy-text">処理中です…</div></div>
+
+  <!-- ライブラリ -->
+  <script src="https://unpkg.com/cropperjs@1.6.2/dist/cropper.min.js"></script>
+  <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+
+  <!-- アプリ -->
+  <script type="module" src="js/main.js"></script>
+</body>
+</html>
