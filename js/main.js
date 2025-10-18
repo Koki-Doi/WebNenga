@@ -6,12 +6,6 @@ window.addEventListener('DOMContentLoaded', () => {
   const container = document.getElementById('card-container');
   const card = document.getElementById('card');
 
-  // オーバーレイ（表/裏）
-  const wrapFront = document.querySelector('.address-side .card-wrapper');
-  const wrapBack  = document.querySelector('.greeting-side .card-wrapper');
-  const getActiveWrapper = () =>
-    card.classList.contains('flipped') ? wrapBack : wrapFront;
-
   // ====== 共通ユーティリティ ======
   const isEditorOpen = () => document.documentElement.classList.contains('editing-open');
 
@@ -29,6 +23,7 @@ window.addEventListener('DOMContentLoaded', () => {
 
   window.addEventListener('keydown', (e) => {
     if (isEditorOpen()) return; // エディタ中はカード制御しない（改行等のため）
+
     const scrollers = ['Space', 'PageUp', 'PageDown', 'ArrowUp', 'ArrowDown', 'Home', 'End'];
     if (e.code === 'Enter' || e.code === 'NumpadEnter') {
       e.preventDefault();
@@ -39,18 +34,18 @@ window.addEventListener('DOMContentLoaded', () => {
   });
 
   // ====== グローバルスクロール抑止（エディタ中は解除） ======
-  const preventScroll = (ev) => { if (!isEditorOpen()) ev.preventDefault(); };
-  window.addEventListener('wheel',        preventScroll, { passive: false });
-  window.addEventListener('touchmove',    preventScroll, { passive: false });
+  const preventScroll = (ev) => {
+    if (isEditorOpen()) return;
+    ev.preventDefault();
+  };
+  window.addEventListener('wheel', preventScroll, { passive: false });
+  window.addEventListener('touchmove', preventScroll, { passive: false });
   window.addEventListener('gesturestart', preventScroll, { passive: false });
 
   // ====== パララックス＋ジャイロ＋ガチャ降下 ======
-  const ROT_X_MAX = 30;   // 上下最大回転（deg）
-  const ROT_Y_MAX = 30;   // 左右最大回転（deg）
-  const STIFF = 100;      // ばね係数
-  const DAMP  = 14;       // 減衰
-  const GLOSS_BASE = 0.10;
-  const GLOSS_GAIN = 0.10;
+  const ROT_X_MAX = 30, ROT_Y_MAX = 30;
+  const STIFF = 100, DAMP = 14;
+  const GLOSS_BASE = 0.10, GLOSS_GAIN = 0.10;
 
   // ジャイロ感度
   const GYRO_GAIN = 1.45;
@@ -59,38 +54,29 @@ window.addEventListener('DOMContentLoaded', () => {
   const LPF = 0.32;
   const GYRO_WEIGHT = 0.92;
 
-  // マウス/タッチによる目標角
-  let targetRX_ptr = 0, targetRY_ptr = 0;
-  // ジャイロによる目標角
-  let targetRX_gyro = 0, targetRY_gyro = 0;
+  // 目標角
+  let targetRX_ptr = 0, targetRY_ptr = 0; // ポインタ
+  let targetRX_gyro = 0, targetRY_gyro = 0; // ジャイロ
 
   let hasGyro = false;
   let gyroEnabled = false;
   let triedEnableGyro = false;
-  let mx = 50, my = 50; // グロスのハイライト
 
-  // ====== ガチャ降下（バウンド） ======
+  // グロス/shine制御
+  let mx = 50, my = 50; // ％（旧：グロス用）
+  let shineX = 0.5, shineY = 0.5; // 0..1
+
+  // ガチャ降下
   let dropping = true;
-  let yVH = -120;      // --dropY と同じ単位（vh）
-  let vY = 0;
+  let yVH = -120, vY = 0;
   const GRAV = 400, REST = 0.2, STOP_V = 10;
 
-  // Z回転（演出）
+  // Z演出
   let rz = 0, vrz = 0;
   const Kz = 80, Cz = 14;
 
-  // インパクトの一瞬の光
   let glossImpact = 0;
   const IMP_DECAY = 5.5;
-
-  // ====== TCGオーバーレイ：比率制御（ポインタ or 傾き） ======
-  let pointerInside = false;                 // カード上にポインタがあるか
-  let lastPointerTs = 0;                     // 直近ポインタ時刻
-  let ratioX_ptr = 0.5, ratioY_ptr = 0.5;    // 0..1
-  const POINTER_HOLD_MS = 500;               // この時間はポインタ優先
-
-  // 直近に適用した値（イプシロン判定用）
-  let lastRatioX = 0.5, lastRatioY = 0.5;
 
   // ====== ジャイロ許可導線 ======
   function showGyroButton() {
@@ -117,7 +103,10 @@ window.addEventListener('DOMContentLoaded', () => {
       if (window.DeviceOrientationEvent &&
           typeof DeviceOrientationEvent.requestPermission === 'function') {
         const res = await DeviceOrientationEvent.requestPermission();
-        if (res !== 'granted') { showGyroButton(); return; }
+        if (res !== 'granted') {
+          showGyroButton();
+          return;
+        }
       }
       startGyroListen();
       gyroEnabled = true;
@@ -132,8 +121,7 @@ window.addEventListener('DOMContentLoaded', () => {
     enableGyro();
   };
   container.addEventListener('touchstart', tryEnableOnFirstInteraction, { passive: true });
-  container.addEventListener('mousedown',  tryEnableOnFirstInteraction);
-
+  container.addEventListener('mousedown', tryEnableOnFirstInteraction);
   if (window.DeviceOrientationEvent &&
       typeof DeviceOrientationEvent.requestPermission === 'function') {
     showGyroButton();
@@ -161,52 +149,39 @@ window.addEventListener('DOMContentLoaded', () => {
     }, { passive: true });
   }
 
-  // ====== ポインタ操作（比率と傾きの両方を更新） ======
+  // ====== ポインタ操作（shine と傾き） ======
   function onPoint(ev) {
     const r = container.getBoundingClientRect();
     const cx = ('touches' in ev ? ev.touches[0].clientX : ev.clientX) - r.left;
     const cy = ('touches' in ev ? ev.touches[0].clientY : ev.clientY) - r.top;
 
-    // 注視点（0..1）
-    ratioX_ptr = Math.min(1, Math.max(0, cx / r.width));
-    ratioY_ptr = Math.min(1, Math.max(0, cy / r.height));
-    lastPointerTs = performance.now();
+    // shine 0..1
+    shineX = Math.min(1, Math.max(0, cx / r.width));
+    shineY = Math.min(1, Math.max(0, cy / r.height));
 
-    // 既存の傾き目標
-    const nx = ratioX_ptr * 2 - 1;
-    const ny = ratioY_ptr * 2 - 1;
+    // 傾き目標
+    const nx = shineX * 2 - 1;
+    const ny = shineY * 2 - 1;
     targetRY_ptr = nx * ROT_Y_MAX;
     targetRX_ptr = -ny * ROT_X_MAX;
 
-    // グロスのハイライト
-    mx = Math.round(ratioX_ptr * 100);
-    my = Math.round(ratioY_ptr * 100);
+    // 既存グロス用
+    mx = Math.round(shineX * 100);
+    my = Math.round(shineY * 100);
   }
+  container.addEventListener('mousemove', onPoint, { passive: true });
+  container.addEventListener('touchmove', onPoint, { passive: true });
 
-  // 「カードの内側にいるときだけ」ポインタ情報を採用し、.is-hover を制御
-  const setHover = (on) => {
-    pointerInside = on;
-    const active = getActiveWrapper();
-    const inactive = active === wrapFront ? wrapBack : wrapFront;
-    if (active)   active.classList.toggle('is-hover', on);
-    if (inactive) inactive.classList.remove('is-hover'); // 裏側は常に外す
-  };
-
-  container.addEventListener('mouseenter', () => setHover(true));
-  container.addEventListener('mouseleave', () => setHover(false));
-  container.addEventListener('mousemove',  (e) => { if (pointerInside) onPoint(e); }, { passive: true });
-  // タッチ端末
-  container.addEventListener('touchstart', (e) => { setHover(true); onPoint(e); }, { passive: true });
-  container.addEventListener('touchmove',  (e) => { if (pointerInside) onPoint(e); }, { passive: true });
-  container.addEventListener('touchend',   () => setHover(false));
-  container.addEventListener('touchcancel',() => setHover(false));
+  function resetTilt() { targetRX_ptr = 0; targetRY_ptr = 0; }
+  container.addEventListener('mouseleave', resetTilt);
+  container.addEventListener('touchend', resetTilt);
 
   const pressOn  = () => card.classList.add('is-pressing');
   const pressOff = () => card.classList.remove('is-pressing');
   container.addEventListener('mousedown', pressOn);
-  window.addEventListener('mouseup',     pressOff);
+  window.addEventListener('mouseup', pressOff);
   container.addEventListener('touchstart', pressOn, { passive: true });
-  window.addEventListener('touchend',      pressOff);
+  window.addEventListener('touchend', pressOff);
 
   // ====== アニメーションループ ======
   let curRX = 0, curRY = 0;
@@ -223,7 +198,6 @@ window.addEventListener('DOMContentLoaded', () => {
     if (dropping) {
       vY += GRAV * dt;
       yVH += vY * dt;
-
       if (yVH >= 0) {
         yVH = 0;
         vY = -vY * REST;
@@ -234,20 +208,14 @@ window.addEventListener('DOMContentLoaded', () => {
           yVH = 0; vY = 0;
         }
       }
-
-      // Z回転（減衰復帰）
       const az = (-Kz * rz - Cz * vrz);
-      vrz += az * dt;
-      rz  += vrz * dt;
+      vrz += az * dt; rz  += vrz * dt;
       glossImpact = Math.max(0, glossImpact - IMP_DECAY * dt);
     } else {
       if (Math.abs(rz) > 0.001 || Math.abs(vrz) > 0.001) {
         const az = (-Kz * rz - Cz * vrz);
-        vrz += az * dt;
-        rz  += vrz * dt;
-      } else {
-        rz = 0; vrz = 0;
-      }
+        vrz += az * dt; rz  += vrz * dt;
+      } else { rz = 0; vrz = 0; }
       glossImpact = Math.max(0, glossImpact - IMP_DECAY * dt);
     }
 
@@ -264,7 +232,7 @@ window.addEventListener('DOMContentLoaded', () => {
     const axY = (tgtRY - curRY) * STIFF - vRY * DAMP;
     vRY += axY * dt; curRY += vRY * dt;
 
-    // CSS変数更新（グロス）
+    // CSS変数更新（カード全体）
     card.style.setProperty('--dropY', `${yVH}vh`);
     card.style.setProperty('--rz', `${rz.toFixed(3)}deg`);
     card.style.setProperty('--rx', `${curRX.toFixed(3)}deg`);
@@ -273,43 +241,30 @@ window.addEventListener('DOMContentLoaded', () => {
     card.style.setProperty('--my', `${my}%`);
     card.style.setProperty('--glossImpact', glossImpact.toFixed(3));
 
-    // ====== オーバーレイ注視点（--ratio-x/y） ======
-    // ポインタ直近 or 内側 → ポインタ比率、他は傾きから生成
-    let useRatioX, useRatioY;
-    if (pointerInside || (now - lastPointerTs <= POINTER_HOLD_MS)) {
-      useRatioX = ratioX_ptr;
-      useRatioY = ratioY_ptr;
+    // グロスの自動ブースト
+    const speed = Math.hypot(vRX, vRY);
+    const boost = Math.min(speed * 0.06, GLOSS_GAIN);
+    card.style.setProperty('--gloss', (GLOSS_BASE + boost).toFixed(3));
+
+    // === 背景ホログラムのハイライト：shineX/shineY を更新 ===
+    // ポインタ未移動のときは傾きから生成（ゆるく追従）
+    if (!Number.isFinite(shineX) || !Number.isFinite(shineY)) {
+      shineX = 0.5; shineY = 0.5;
     } else {
       const rxNorm = (curRX / (ROT_X_MAX || 1));  // -1..1
       const ryNorm = (curRY / (ROT_Y_MAX || 1));  // -1..1
-      useRatioX = Math.min(1, Math.max(0, (ryNorm + 1) / 2));   // 左→0 / 右→1
-      useRatioY = Math.min(1, Math.max(0, (-rxNorm + 1) / 2));  // 上で0に近づくよう反転
+      const autoX = (ryNorm + 1) / 2;             // 0..1
+      const autoY = (-rxNorm + 1) / 2;            // 0..1
+      // マウス優先：8割ポインタ、2割自動（好みで調整）
+      const Wp = 0.8;
+      shineX = shineX * Wp + autoX * (1 - Wp);
+      shineY = shineY * Wp + autoY * (1 - Wp);
     }
-
-    // スムージング＆イプシロン更新（微小差はスタイルを書き換えない）
-    const SMOOTH = 0.35;
-    const EPS = 0.002;
-
-    const nextX = lastRatioX + (useRatioX - lastRatioX) * SMOOTH;
-    const nextY = lastRatioY + (useRatioY - lastRatioY) * SMOOTH;
-
-    const active = getActiveWrapper();
-    if (active) {
-      if (Math.abs(nextX - lastRatioX) > EPS) {
-        active.style.setProperty('--ratio-x', nextX.toFixed(4));
-        lastRatioX = nextX;
-      }
-      if (Math.abs(nextY - lastRatioY) > EPS) {
-        active.style.setProperty('--ratio-y', nextY.toFixed(4));
-        lastRatioY = nextY;
-      }
-    }
-
-    // 裏側は常に hover を外す（可視切替時のチラつき防止）
-    const inactive = active === wrapFront ? wrapBack : wrapFront;
-    if (inactive && inactive.classList.contains('is-hover')) {
-      inactive.classList.remove('is-hover');
-    }
+    // 両面の .bg が参照（:before/:after の中心が動く）
+    document.querySelectorAll('.bg').forEach(bg => {
+      bg.style.setProperty('--shineX', Math.round(shineX * 100) + '%');
+      bg.style.setProperty('--shineY', Math.round(shineY * 100) + '%');
+    });
 
     requestAnimationFrame(raf);
   }

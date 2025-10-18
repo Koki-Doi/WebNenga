@@ -13,31 +13,23 @@
     <div id="card" class="new-year-card" role="button" tabindex="0" aria-pressed="false">
       <!-- 表：住所面 -->
       <section class="side address-side">
+        <!-- 背景ホログラム（画像/文字には非適用） -->
+        <div class="bg" aria-hidden="true"></div>
+
         <img class="stamp" src="./images/kitte.png" alt="切手" />
         <div class="postal-code">〒□□□-□□□□</div>
         <div class="address">宛名&nbsp;太郎&nbsp;様</div>
         <div class="sender">土井&nbsp;仰輝</div>
-
-        <!-- ▼ TCGホバー演出（表） -->
-        <div class="card-wrapper" aria-hidden="true">
-          <div class="pattern"></div>
-          <div class="color"></div>
-          <div class="highlight"></div>
-        </div>
       </section>
 
       <!-- 裏：挨拶面 -->
       <section class="side greeting-side">
+        <!-- 背景ホログラム -->
+        <div class="bg" aria-hidden="true"></div>
+
         <h1></h1>
         <img class="new-year-image" src="./images/new-year-image.png" alt="新年イメージ" />
         <p>謹んで新春のお慶びを申し上げます。<br>旧年中は格別のご高配を賜り厚く御礼申し上げます。<br>本年もご期待に沿えるよう精進してまいります。</p>
-
-        <!-- ▼ TCGホバー演出（裏） -->
-        <div class="card-wrapper" aria-hidden="true">
-          <div class="pattern"></div>
-          <div class="color"></div>
-          <div class="highlight"></div>
-        </div>
       </section>
     </div>
   </div>
@@ -59,7 +51,6 @@
           <label class="stack">
             <span class="label">
               宛名
-              <!-- 敬称の“上”にCSVモード切替 -->
               <button id="btn-csv-mode" type="button" class="ghost small" title="CSV一括生成モードを開く" aria-pressed="false">CSVモード</button>
             </span>
             <div class="row">
@@ -164,7 +155,6 @@
           <div class="row wrap">
             <input id="csv-file" type="file" accept=".csv,text/csv" />
             <button id="csv-generate" class="primary" disabled>URL生成してCSVダウンロード</button>
-            <!-- ▼ CSVモードから標準モードに戻るボタン -->
             <button id="csv-exit" type="button" class="ghost">標準モードに戻る</button>
           </div>
 
