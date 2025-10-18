@@ -29,7 +29,6 @@ export function initEditor() {
   const msgEl    = $('.greeting-side p');
   const greeting = $('.greeting-side');
   const photoEl  = $('.new-year-image');
-  const kingaEl  = document.querySelector('.greeting-side h1'); // ← 追加：謹賀新年見出し
 
   const openBtn  = $('#editor-open');
   const overlay  = $('#editor-overlay');
@@ -53,6 +52,7 @@ export function initEditor() {
   const cropImg      = $('#crop-img');
   const btnCropReset = $('#btn-crop-reset');
   const btnCropApply = $('#btn-crop-apply');
+  const btnExport    = $('#btn-export');
 
   // 共有
   const actionsBar = $('#editor-actions');
@@ -80,9 +80,6 @@ export function initEditor() {
   let currentTplId  = 'std1';
   let csvOpen = false;
 
-  // 「謹賀新年」表示フラグ（E列とURLの kn と対応）
-  let kingaFlag = 0; // 0: 非表示, 1: 表示
-
   // ===== 背景反映ヘルパ =====
   function setBackground(displayUrl, stableUrl) {
     // プレビューは常に即時に displayUrl を描画
@@ -96,16 +93,6 @@ export function initEditor() {
   function revokeObjUrl() {
     if (currentObjUrl) { URL.revokeObjectURL(currentObjUrl); currentObjUrl = null; }
   }
-
-  // ===== 「謹賀新年」適用 =====
-  function applyKinga(flag){
-    kingaFlag = flag ? 1 : 0;
-    if (!kingaEl) return;
-    kingaEl.textContent = '謹賀新年';
-    kingaEl.hidden = (kingaFlag === 0);
-  }
-  // 初期は非表示に寄せる（HTML側で hidden を付けていてもOK）
-  applyKinga(kingaFlag);
 
   // ===== モーダル開閉 =====
   const isEditorOpen = () => overlay.getAttribute('aria-hidden') === 'false';
@@ -210,7 +197,6 @@ export function initEditor() {
       bgurl: bgurlForShare,
       pv: chkPhoto.checked ? 1 : 0,
       mbg: chkMsgBg.checked ? 1 : 0,
-      kn: kingaFlag,              // ← 追加：謹賀新年フラグをURLへ
       mtid: currentTplId
     };
 
@@ -310,6 +296,16 @@ export function initEditor() {
   btnCropReset?.addEventListener('click', ()=> cropper && cropper.reset());
   btnCropApply?.addEventListener('click', async ()=>{ await processCropAndUpload(); });
 
+  // 画像書き出し（確認用）
+  btnExport?.addEventListener('click', async ()=>{
+    const src = stableBgUrl || selectedBgUrl;
+    if (!src){ showToast('背景がありません'); return; }
+    const blob = await fetch(src).then(r=>r.blob());
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob); a.download = 'nenga_bg.webp'; a.click();
+    setTimeout(()=>URL.revokeObjectURL(a.href), 800);
+  });
+
   // ===== URLコピー =====
   btnCopy?.addEventListener('click', async ()=>{
     await applyPreviewAndURL.flush?.();
@@ -325,7 +321,7 @@ export function initEditor() {
   async function bootFromHash(){
     const parsed = parseHash(location.hash); if(!parsed){ applyPreviewAndURL(); return; }
     const obj = decodeData(parsed.data); if(!obj) return;
-    const { a, s, m, h='様', bgurl=null, pv=1, mbg=1, kn=0, mtid='std1' } = obj; // ← kn を取得
+    const { a, s, m, h='様', bgurl=null, pv=1, mbg=1, mtid='std1' } = obj;
 
     const address = a ?? ''; const sender = s ?? ''; const message = m ?? ''; const honor = h ?? '様';
     applyToDOM(address, sender, message, honor);
@@ -336,7 +332,6 @@ export function initEditor() {
 
     photoEl.classList.toggle('hidden', !pv);
     msgEl.classList.toggle('no-bg', !mbg);
-    applyKinga(kn); // ← 反映
 
     currentTplId = mtid || 'std1'; buildTemplateOptions();
     const {base} = splitHonorific(address);
