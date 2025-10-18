@@ -88,7 +88,7 @@ window.addEventListener('DOMContentLoaded', () => {
       position: 'fixed', right: '12px', bottom: '12px', zIndex: 9999,
       padding: '10px 14px', borderRadius: '8px', border: '0',
       fontSize: '14px', background: '#b23a1e', color: '#fff',
-      boxShadow: '0 6px 16px rgba(0,0,0,.25)', opacity: '0.15', cursor: 'pointer'
+      boxShadow: '0 6px 16px rgba(0,0,0,.25)', cursor: 'pointer'
     });
     btn.addEventListener('click', async (e) => {
       e.stopPropagation();

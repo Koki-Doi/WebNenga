@@ -6,6 +6,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
   <link rel="stylesheet" href="nenga.css" />
   <link rel="stylesheet" href="https://unpkg.com/cropperjs@1.6.2/dist/cropper.min.css">
+  <!-- 改行一致のため全端末で同フォントを使用（フォールバック防止） -->
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&display=swap" rel="stylesheet">
 </head>
 <body>
   <!-- カード表示 -->
@@ -29,7 +31,11 @@
 
         <h1></h1>
         <img class="new-year-image" src="./images/new-year-image.png" alt="新年イメージ" />
-        <p>謹んで新春のお慶びを申し上げます。<br>旧年中は格別のご高配を賜り厚く御礼申し上げます。<br>本年もご期待に沿えるよう精進してまいります。</p>
+        <p class="greeting-message">
+          謹んで新春のお慶びを申し上げます。<br>
+          旧年中は格別のご高配を賜り厚く御礼申し上げます。<br>
+          本年もご期待に沿えるよう精進してまいります。
+        </p>
       </section>
     </div>
   </div>
@@ -185,7 +191,9 @@
 
   <!-- アプリ -->
   <script type="module" src="js/main.js"></script>
- <!-- 追加：縦位置調整パネル＆適用ロジック -->
+  <!-- 位置調整（既存） -->
   <script type="module" src="./js/position-controls.js"></script>
+  <!-- ★新規：改行維持のための自動フォントフィット -->
+  <script type="module" src="./js/message-autofit.js"></script>
 </body>
 </html>

@@ -59,7 +59,7 @@ html, body {
   backface-visibility: hidden; -webkit-backface-visibility: hidden;
   border-radius: 0; background: #fff; overflow: hidden; transform: translateZ(0);
   border: 1px solid #fff; box-sizing: border-box;
-  isolation: isolate; /* ブレンドの安定化 */
+  isolation: isolate;
 }
 
 /* ====== 表 ====== */
@@ -81,11 +81,10 @@ html, body {
   font-size: clamp(11px, 3.4cqh, 24px);
 }
 
-/* ====== 裏（背景中央固定＋任意オフセット可） ====== */
+/* ====== 裏（背景） ====== */
 .greeting-side {
   --bg-image: url('./images/background_sample1.png');
   --bg-off-x: 0%; --bg-off-y: 0%;
-
   background-image: var(--bg-image);
   background-color: #fff;
   background-size: cover;
@@ -104,109 +103,83 @@ html, body {
   text-shadow: 1px 1px 2px rgba(0,0,0,.35);
   font-size: clamp(14px, 3.4cqh, 26px);
 }
+
+/* ====== 挨拶文（改行一致のコア） ====== */
+.greeting-side .greeting-message,
 .greeting-side p {
   display: inline-block; max-width: min(92%, 760px);
+
+  /* 改行ルール固定＆フォント統一 */
+  font-family: "Noto Sans JP", system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Hiragino Kaku Gothic ProN", "Meiryo", sans-serif;
+  line-break: strict; word-break: keep-all; text-wrap: pretty;
+
+  /* 初期フォントサイズ（オートフィットの開始点） */
+  font-size: 2.15cqh;
+
+  /* 行幅は28全角相当を目安（実際はJSでオートフィットするので過不足OK） */
+  width: 28ic;
+
   margin: 10px 0 18px; padding: .9em 1.1em; line-height: 1.9; text-align: center;
   color: #1a1a1a; background: rgba(255,255,255,.86);
   border-radius: 10px; box-shadow: 0 4px 16px rgba(0,0,0,.18);
   -webkit-backdrop-filter: blur(2px); backdrop-filter: blur(2px);
-  font-size: clamp(13px, 2.7cqh, 20px);
+
+  /* 位置調整（JSが translate を当てる） */
+  will-change: transform; transform: translateZ(0); transition: translate 80ms linear;
 }
 .greeting-side p.no-bg {
   background: transparent !important; box-shadow: none !important;
   -webkit-backdrop-filter: none !important; backdrop-filter: none !important;
 }
 
-/* 裏面のメイン写真：中央寄せ強化 & 表示切替 */
+/* メイン写真 */
 .new-year-image {
   display: block; margin-left: auto; margin-right: auto;
   width: min(95%, 1065px); height: auto; max-height: 70%;
   margin-bottom: 14px; margin-top: -2.5cqh; border-radius: 6px;
   position: relative; z-index: 1;
+  will-change: transform; transform: translateZ(0); transition: translate 80ms linear;
 }
 .new-year-image.hidden { display: none !important; }
 
-/* ====== 背景グロス（白主体＋ごく薄い色味） ====== */
-:root{
-  /* 色味のトーンはここで調整（淡いシアン〜ラベンダー） */
-  --tint-a: #8bdcff;   /* シアン寄り */
-  --tint-b: #b7a7ff;   /* ラベンダー寄り */
-  --tint-strength: 0.12; /* 0.06〜0.20 の範囲が上品で◎ */
-}
-
-.bg{
-  position:absolute; inset:0; z-index: 0; border-radius: 0; pointer-events:none;
+/* ====== 背景グロス ====== */
+:root{ --tint-a:#8bdcff; --tint-b:#b7a7ff; --tint-strength:0.12; }
+.bg{ position:absolute; inset:0; z-index:0; pointer-events:none;
   background:
     radial-gradient(120% 140% at 0% 0%, #ffffff0f 0%, transparent 60%),
     radial-gradient(120% 140% at 100% 0%, #ffffff0a 0%, transparent 60%),
-    linear-gradient(180deg, #ffffff00, #00000008);
-}
-
-/* 柔らかな白ベール＋ごく薄い色の差し込み帯 */
-.bg::before{
-  content:""; position:absolute; inset:-2px; border-radius: 0;
-  mix-blend-mode: screen;
-  opacity: .40;                   /* 明るさ（0.30〜0.55） */
-  filter: blur(6px) saturate(1);
-  background:
-    /* うすーいカラーの帯を白に混ぜる（色は変わるが“キラキラ”はしない） */
-    linear-gradient(115deg,
+    linear-gradient(180deg, #ffffff00, #00000008); }
+.bg::before{ content:""; position:absolute; inset:-2px; mix-blend-mode: screen; opacity:.40; filter: blur(6px) saturate(1);
+  background: linear-gradient(115deg,
       color-mix(in oklab, white 80%, var(--tint-a) calc(var(--tint-strength)*100%)) 0%,
       transparent 38% 62%,
-      color-mix(in oklab, white 80%, var(--tint-b) calc(var(--tint-strength)*100%)) 100%
-    );
-  will-change: opacity, background;
-  transform: translateZ(0);
-}
-
-/* 指先ハイライト：中心は白、外周にほんのり色 */
-.bg::after{
-  content:""; position:absolute; inset:0; border-radius: 0;
-  mix-blend-mode: screen;
-  opacity: .62;                   /* 眩しさ（0.45〜0.70） */
-  background:
-    radial-gradient(
-      100% 100% at var(--shineX,50%) var(--shineY,50%),
+      color-mix(in oklab, white 80%, var(--tint-b) calc(var(--tint-strength)*100%)) 100% ); }
+.bg::after{ content:""; position:absolute; inset:0; mix-blend-mode: screen; opacity:.62;
+  background: radial-gradient(100% 100% at var(--shineX,50%) var(--shineY,50%),
       #ffffff48 0%,
       color-mix(in oklab, #ffffff30 80%, var(--tint-a) calc(var(--tint-strength)*100%)) 35%,
       color-mix(in oklab, #ffffff18 80%, var(--tint-b) calc(var(--tint-strength)*100%)) 55%,
-      transparent 68%
-    );
-  will-change: background, opacity;
-  transform: translateZ(0);
-}
+      transparent 68% ); }
 
-
-
-/* ====== 編集UI（はみ出し防止＆再レイアウト） ====== */
+/* ====== 編集UI ====== */
 #editor-open {
   position: fixed; left: 12px; bottom: 12px; z-index: 60;
   border: 0; border-radius: 10px; padding: 10px 14px;
   background: #0ea5e9; color: #fff; box-shadow: 0 6px 16px rgba(0,0,0,.25);
 }
 #editor-overlay[aria-hidden="true"]{ display: none; }
-#editor-overlay{
-  position: fixed; inset: 0; background: rgba(0,0,0,.35); z-index: 80; display: grid; place-items: center;
-}
-.editor-panel{
-  width: min(980px, 96vw); max-height: min(94dvh, 900px);
-  background: #fff; border-radius: 12px; box-shadow: 0 20px 60px rgba(0,0,0,.35);
-  display: flex; flex-direction: column; overflow: hidden;
-}
-.editor-header{
-  display: flex; align-items: center; justify-content: space-between;
-  padding: 10px 14px; border-bottom: 1px solid #eee; flex: 0 0 auto;
-}
+#editor-overlay{ position: fixed; inset: 0; background: rgba(0,0,0,.35); z-index: 80; display: grid; place-items: center; }
+.editor-panel{ width: min(980px, 96vw); max-height: min(94dvh, 900px); background: #fff; border-radius: 12px; box-shadow: 0 20px 60px rgba(0,0,0,.35);
+  display: flex; flex-direction: column; overflow: hidden; }
+.editor-header{ display: flex; align-items: center; justify-content: space-between; padding: 10px 14px; border-bottom: 1px solid #eee; }
 .editor-body{ padding: 14px; overflow: auto; flex: 1 1 auto; }
 .grid2{ display: grid; grid-template-columns: 1fr 1fr; gap: 16px; min-width: 0; }
 @media (max-width: 860px){ .grid2{ grid-template-columns: 1fr; } }
-
 .group{ border: 1px solid #eef2f7; border-radius: 10px; padding: 12px; background: #fafbfc; min-width: 0; }
 .group-title{ margin: 0 0 10px; font-size: 14px; color: #475569; }
 label.stack{ display: grid; gap: 6px; margin-bottom: 12px; min-width: 0; }
 label .label{ font-size: 13px; color: #334155; }
-.row{ display: flex; gap: 8px; align-items: stretch; min-width: 0; }
-.row.wrap{ flex-wrap: wrap; }
+.row{ display: flex; gap: 8px; align-items: stretch; min-width: 0; } .row.wrap{ flex-wrap: wrap; }
 .flex-1{ flex: 1 1 0; min-width: 0; }
 
 textarea, input[type="text"], select{
@@ -237,30 +210,15 @@ select{ width: auto; }
 button.primary{ background: #10b981; color:#fff; border:0; padding:8px 12px; border-radius:8px; }
 button{ padding:8px 12px; border-radius:8px; border:1px solid #d4dbe3; background:#fff; }
 
-/* フッター操作 */
-.editor-actions{
-  display: flex; gap: 8px; align-items: center; padding: 12px 14px; border-top: 1px solid #eee; flex: 0 0 auto;
-}
-.editor-actions input{
-  flex: 1 1 auto; min-width: 40%; padding: 8px; border:1px solid #d4dbe3; border-radius:8px; box-sizing: border-box;
-}
+/* フッター */
+.editor-actions{ display: flex; gap: 8px; align-items: center; padding: 12px 14px; border-top: 1px solid #eee; }
+.editor-actions input{ flex: 1 1 auto; min-width: 40%; padding: 8px; border:1px solid #d4dbe3; border-radius:8px; box-sizing: border-box; }
 
 /* トースト／ビジー */
-#toast{
-  position: fixed; left: 50%; transform: translateX(-50%); bottom: 18px;
-  background: rgba(0,0,0,.8); color: #fff; padding: 10px 14px; border-radius: 10px;
-  z-index: 100; display: none;
-}
-#busy{
-  position: fixed; inset: 0; display: none; place-items: center;
-  background: rgba(255,255,255,.45); z-index: 90;
-}
+#toast{ position: fixed; left: 50%; transform: translateX(-50%); bottom: 18px; background: rgba(0,0,0,.8); color: #fff; padding: 10px 14px; border-radius: 10px; z-index: 100; display: none; }
+#busy{ position: fixed; inset: 0; display: none; place-items: center; background: rgba(255,255,255,.45); z-index: 90; }
 #busy[aria-hidden="false"]{ display: grid; }
-.spinner{
-  width: 38px; height: 38px; border-radius: 999px;
-  border: 4px solid rgba(0,0,0,.2); border-top-color: #0ea5e9;
-  animation: sp 1s linear infinite; margin: auto;
-}
+.spinner{ width: 38px; height: 38px; border-radius: 999px; border: 4px solid rgba(0,0,0,.2); border-top-color: #0ea5e9; animation: sp 1s linear infinite; margin: auto; }
 .busy-text{ margin-top: 8px; text-align: center; font-weight: 600; color: #333; }
 @keyframes sp { to { transform: rotate(360deg); } }
 
@@ -268,72 +226,14 @@ button{ padding:8px 12px; border-radius:8px; border:1px solid #d4dbe3; backgroun
 .samebox{ min-height: 6.5em; line-height: 1.5; resize: vertical; }
 
 /* --- エディタ表示中はスクロール解禁（モバイル対策） --- */
-html.editing-open, body.editing-open{
-  overflow: auto !important;
-  overscroll-behavior: contain;
-  height: 100dvh;
-}
+html.editing-open, body.editing-open{ overflow: auto !important; overscroll-behavior: contain; height: 100dvh; }
+/* iOS スクロール品質 */
+#editor-overlay, .editor-panel, .editor-body{ -webkit-overflow-scrolling: touch; touch-action: auto; }
 
-/* エディタ内スクロールの滑らかさ（iOS） */
-#editor-overlay, .editor-panel, .editor-body{
-  -webkit-overflow-scrolling: touch;
-  touch-action: auto;
-}
+/* URLコピー幅 */
+#btn-copy{ padding-inline: 18px; min-width: 160px; white-space: nowrap; letter-spacing: .02em; }
 
-/* 既存 */
-.editor-panel{ overflow: hidden; }
-.editor-body{ overflow: auto; }
-
-/* URLをコピー ボタンを少し横に広げる */
-#btn-copy{
-  padding-inline: 18px; min-width: 160px; white-space: nowrap; letter-spacing: .02em;
-}
-
-/* ===== あなたの既存 nenga.css 一式 ===== */
-/* ここはそのまま残してください（カード比率固定、反転アニメ、背景、既存UI 等） */
-
-
-/* ===== 末尾に“最小追加” ===== */
-
-/* 挨拶面の要素が translate を適用できるように保険を掛ける */
-/* ===== 既存の nenga.css 一式（カード比率、反転アニメ、背景、既存UI 等） ===== */
-/* ・・・あなたの既存スタイル・・・ */
-
-
-/* ===== ここから“位置調整”のための最小追記（末尾に追加） ===== */
-
-/* 挨拶面の要素に translate を適用できるように保険を掛ける（既存transformを壊さない） */
+/* 位置調整の保険 */
 .greeting-side .new-year-image,
 .greeting-side .greeting-message,
-.greeting-side p {
-  will-change: transform;
-  transform: translateZ(0);
-  transition: translate 80ms linear; /* スライダーの追従を少し滑らかに */
-  display: block; /* pがinlineの場合の視覚的ズレ対策 */
-}
-
-/* 画像の初期体裁（既存があればそれを優先。ここは保険） */
-.greeting-side .new-year-image {
-  max-width: 88%;
-  height: auto;
-  margin: 0 auto;
-  display: block;
-}
-
-/* メッセージ体裁（※ 背景色は“元のCSS”を尊重。ここで上書きしない） */
-.greeting-side .greeting-message,
-.greeting-side p {
-  margin: 12px auto 0;
-  width: min(90%, 560px);
-  line-height: 1.7;
-  text-align: center;
-  /* background は既存の白半透明を維持するため未指定 */
-  padding: 0;
-}
-
-/* 位置調整パネル（見た目補助のみ。既存UIに馴染ませる） */
-#panel-position-controls .label { font-weight: 600; }
-#panel-position-controls .row { display: flex; align-items: center; gap: 8px; }
-#panel-position-controls .stack { display: grid; gap: 6px; }
-#panel-position-controls .hint { font-size: 12px; color: #666; }
-#panel-position-controls input[type="range"] { width: 100%; }
+.greeting-side p { will-change: transform; transform: translateZ(0); transition: translate 80ms linear; display: block; }
