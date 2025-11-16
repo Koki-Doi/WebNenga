@@ -87,6 +87,8 @@ export function initEditor() {
   let didAutoApply = false;
   let currentTplId  = 'std1';
   let csvOpen = false;
+  let remoteUploadDisabled = false;
+  let uploadFallbackNotified = false;
 
   // ===== 背景反映ヘルパ =====
   function setBackground(displayUrl, stableUrl) {
@@ -253,19 +255,33 @@ export function initEditor() {
 
     revokeObjUrl();
     currentObjUrl = URL.createObjectURL(dataURLToBlob(dataURL));
-    setBackground(currentObjUrl);  // ここでは共有用URLは更新しない
+    setBackground(currentObjUrl);  // プレビューでは共有URLは更新しない
 
-    // ② 非同期アップロード（RLSがINSERTのみでもOK: upsert:false & unique key）
+    const applyLocalOnlyBackground = () => {
+      setBackground(currentObjUrl, dataURL);
+      if (!uploadFallbackNotified) {
+        showToast('外部ストレージに接続できないため、画像をデータURLとして共有に埋め込みます。');
+        uploadFallbackNotified = true;
+      }
+    };
+
+    if (remoteUploadDisabled) {
+      applyLocalOnlyBackground();
+      return;
+    }
+
+    // Ｂ. Supabaseへアップロード（RLSでINSERTのみOK: upsert:false & unique key）
     (async ()=>{
       try {
         const shortId = await hashIdShort(sanitize(inpAddress.value), sanitize(inpSender.value), 10);
         const publicUrl = await uploadBgWebP(dataURL, shortId);
-        // 成功 → 共有URL更新 & プレビューも安定URLへ
+        // 成功 → 公開URL更新 & プレビューも安定URLへ
         setBackground(publicUrl, publicUrl);
-        showToast('背景をアップロードして共有URLを更新しました');
+        showToast('背景をアップロードしてURLを更新しました');
       } catch (err) {
         console.error('Upload failed', err);
-        showToast('背景のアップロードに失敗しました（プレビューは表示中）');
+        remoteUploadDisabled = true;
+        applyLocalOnlyBackground();
       }
     })();
   }
