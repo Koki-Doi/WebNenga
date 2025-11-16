@@ -50,18 +50,23 @@ export function initCardEffects({ container, card }) {
     const btn = document.createElement('button');
     btn.id = 'gyro-btn';
     btn.textContent = 'Gyroを有効化';
+    btn.style.fontFamily = "'Noto Sans JP', 'Segoe UI', sans-serif";
     Object.assign(btn.style, {
       position: 'fixed',
       right: '12px',
       bottom: '12px',
-      zIndex: 9999,
-      padding: '10px 14px',
-      borderRadius: '8px',
+      zIndex: 65,
+      padding: '16px 24px',
+      borderRadius: '999px',
       border: '0',
-      fontSize: '14px',
-      background: '#b23a1e',
+      fontSize: '16px',
+      fontWeight: '700',
+      letterSpacing: '.12em',
+      textTransform: 'uppercase',
+      background: 'linear-gradient(135deg, #0ea5e9, #2563eb)',
       color: '#fff',
-      boxShadow: '0 6px 16px rgba(0,0,0,.25)',
+      boxShadow: '0 20px 38px rgba(14,165,233,.45)',
+      animation: 'cta-glow 2.1s ease-in-out infinite',
       cursor: 'pointer'
     });
     btn.addEventListener('click', async (e) => {

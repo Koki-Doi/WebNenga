@@ -4,8 +4,14 @@
 export function initCardControls({ container, card, isEditorOpen }) {
   if (!container || !card) return;
 
+  const markTapHintDismissed = () => {
+    if (card.classList.contains('tap-hint-dismissed')) return;
+    card.classList.add('tap-hint-dismissed');
+  };
+
   const toggle = () => {
     if (isEditorOpen()) return;
+     markTapHintDismissed();
     card.classList.toggle('flipped');
     const pressed = card.classList.contains('flipped') ? 'true' : 'false';
     card.setAttribute('aria-pressed', pressed);
@@ -37,6 +43,13 @@ export function initCardControls({ container, card, isEditorOpen }) {
   window.addEventListener('wheel', preventScroll, { passive: false });
   window.addEventListener('touchmove', preventScroll, { passive: false });
   window.addEventListener('gesturestart', preventScroll, { passive: false });
+
+  const handlePointerDown = () => {
+    if (isEditorOpen()) return;
+    markTapHintDismissed();
+    container.removeEventListener('pointerdown', handlePointerDown);
+  };
+  container.addEventListener('pointerdown', handlePointerDown, { passive: true });
 
   return { toggle };
 }

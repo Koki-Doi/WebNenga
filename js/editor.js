@@ -25,6 +25,7 @@ export function initEditor() {
 
   // ===== DOM =====
   const addrEl   = $('.address');
+  const addrMainEl = $('.address-main');
   const senderEl = $('.sender');
   const msgEl    = $('.greeting-side p');
   const greeting = $('.greeting-side');
@@ -48,6 +49,7 @@ export function initEditor() {
   // 背景：サンプル/アップロード/トリミング
   const sampleGrid   = $('#sample-grid');
   const inpBgFile    = $('#inp-bgfile');
+  const bgUploader   = $('#bgfile-uploader');
   const cropBox      = $('#cropper');
   const cropImg      = $('#crop-img');
   const btnCropReset = $('#btn-crop-reset');
@@ -67,6 +69,12 @@ export function initEditor() {
   const csvExit     = $('#csv-exit');
   const csvSummary  = $('#csv-summary');
   const csvPreview  = $('#csv-preview');
+
+  const updateBgFileVisualState = () => {
+    const hasFile = !!(inpBgFile?.files && inpBgFile.files.length);
+    bgUploader?.classList.toggle('uploader--has-file', hasFile);
+  };
+  updateBgFileVisualState();
 
   // ===== State =====
   // 表示用（Blob可・プレビュー優先）
@@ -143,7 +151,8 @@ export function initEditor() {
 
   // ===== 初期フォームへ流し込み =====
   (function hydrate(){
-    const domAddr = (addrEl.innerText||addrEl.textContent||'').replace(/\u00a0/g,' ').trim();
+    const addrSource = addrMainEl || addrEl;
+    const domAddr = (addrSource?.innerText||addrSource?.textContent||'').replace(/\u00a0/g,' ').trim();
     const {base,honor} = splitHonorific(domAddr);
     inpAddress.value = base; inpHonor.value = honor;
     inpSender.value  = (senderEl.innerText||senderEl.textContent||'').trim();
@@ -166,7 +175,8 @@ export function initEditor() {
     const base = (address||'').trim();
     const suffix = honor || '';
     const final = suffix ? `${base} ${suffix}` : base;
-    addrEl.innerHTML      = escapeHtml(final).replace(/ /g,'&nbsp;');
+    const addrTarget = addrMainEl || addrEl;
+    if (addrTarget) addrTarget.innerHTML = escapeHtml(final).replace(/ /g,'&nbsp;');
     senderEl.textContent  = (sender||'').trim();
     msgEl.innerHTML       = plainToHtml(message||'');
   }
@@ -261,6 +271,7 @@ export function initEditor() {
   }
 
   inpBgFile?.addEventListener('change', async ()=>{
+    updateBgFileVisualState();
     let f = inpBgFile.files?.[0]; if(!f) return;
 
     // HEIF → JPEG 変換（必要な場合のみ）
