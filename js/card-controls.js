@@ -4,6 +4,7 @@
 export function initCardControls({ container, card, isEditorOpen }) {
   if (!container || !card) return;
 
+  let lastFlipDir = 1;
   const getIsFlipped = () => card.classList.contains('flipped');
   const updatePressedState = () => {
     const pressed = getIsFlipped() ? 'true' : 'false';
@@ -13,21 +14,22 @@ export function initCardControls({ container, card, isEditorOpen }) {
     card.classList.toggle('flipped', shouldFlip);
     updatePressedState();
   };
+  const setFlipDirection = (dir = 1) => {
+    const normalized = dir >= 0 ? 1 : -1;
+    lastFlipDir = normalized;
+    card.style.setProperty('--flip-direction', `${normalized}`);
+  };
+  setFlipDirection(1);
 
   const markTapHintDismissed = () => {
     if (card.classList.contains('tap-hint-dismissed')) return;
     card.classList.add('tap-hint-dismissed');
   };
 
-  const setFlippedState = (shouldFlip) => {
+  const toggle = (direction = null) => {
     if (isEditorOpen()) return;
     markTapHintDismissed();
-    applyFlipState(shouldFlip);
-  };
-
-  const toggle = () => {
-    if (isEditorOpen()) return;
-    markTapHintDismissed();
+    if (direction != null) setFlipDirection(direction);
     applyFlipState(!getIsFlipped());
   };
 
@@ -94,8 +96,8 @@ export function initCardControls({ container, card, isEditorOpen }) {
     const dx = t.clientX - sx;
     const dy = t.clientY - sy;
     if (Math.abs(dx) < SWIPE_THRESHOLD || Math.abs(dy) > SWIPE_VERTICAL_LIMIT) return;
-    const shouldFlip = dx < 0;
-    setFlippedState(shouldFlip);
+    const direction = dx < 0 ? -1 : 1;
+    toggle(direction);
   };
 
   container.addEventListener('touchstart', handleTouchStart, { passive: true });

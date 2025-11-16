@@ -27,14 +27,14 @@ html, body {
   --groundY: 0vh;
   --rx: 0deg; --ry: 0deg; --rz: 0deg; --mx: 50%; --my: 50%;
   --gloss: 0.10; --glossImpact: 0; --dropY: -120vh;
+  --flip-angle: 0deg; --flip-direction: 1;
 
   will-change: transform;
   transform: translateY(calc(var(--groundY) + var(--dropY))) rotateZ(var(--rz))
-             rotateX(var(--rx)) rotateY(var(--ry));
+             rotateX(var(--rx)) rotateY(calc(var(--ry) + var(--flip-angle, 0deg)));
 }
 .new-year-card.flipped {
-  transform: translateY(calc(var(--groundY) + var(--dropY))) rotateZ(var(--rz))
-             rotateX(var(--rx)) rotateY(calc(var(--ry) + 180deg));
+  --flip-angle: calc(180deg * var(--flip-direction, 1));
 }
 @media (max-width: 820px) {
   .new-year-card {
@@ -50,17 +50,13 @@ html, body {
   .new-year-card {
     transform: translateY(calc(var(--groundY) + var(--dropY))) rotateZ(var(--rz))
                rotateX(clamp(-12deg, var(--rx), 12deg))
-               rotateY(clamp(-15deg, var(--ry), 15deg));
-  }
-  .new-year-card.flipped {
-    transform: translateY(calc(var(--groundY) + var(--dropY))) rotateZ(var(--rz))
-               rotateX(clamp(-12deg, var(--rx), 12deg))
-               rotateY(calc(clamp(-15deg, var(--ry), 15deg) + 180deg));
+               rotateY(calc(clamp(-15deg, var(--ry), 15deg) + var(--flip-angle, 0deg)));
   }
 }
 .new-year-card.is-pressing {
   transform: translateY(calc(var(--groundY) + var(--dropY))) rotateZ(var(--rz))
-             translateZ(2px) rotateX(calc(var(--rx) + 1.2deg)) rotateY(var(--ry));
+             translateZ(2px) rotateX(calc(var(--rx) + 1.2deg))
+             rotateY(calc(var(--ry) + var(--flip-angle, 0deg)));
 }
 
 /* ====== 共通：面 ====== */
