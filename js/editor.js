@@ -243,10 +243,11 @@ export function initEditor() {
   // ===== 画像トリミング → プレビュー即時 → バックグラウンドでアップロード（毎回ユニークKey） =====
   function destroyCropper(){ if (cropper){ cropper.destroy(); cropper=null; } }
 
+
   async function processCropAndUpload() {
     if (!cropper) return;
 
-    // ① プレビュー用dataURL（確実に出す）
+    // A. プレビュー用 dataURL を生成
     const cRaw = cropper.getCroppedCanvas({ width: OUT_W, height: OUT_H, imageSmoothingQuality: 'high' });
     const dataURL = encodeImageMax(cRaw, {
       maxKB: 1900, startQ: 0.78, minQ: 0.35, stepQ: 0.06,
@@ -255,7 +256,7 @@ export function initEditor() {
 
     revokeObjUrl();
     currentObjUrl = URL.createObjectURL(dataURLToBlob(dataURL));
-    setBackground(currentObjUrl);  // プレビューでは共有URLは更新しない
+    setBackground(currentObjUrl);  // プレビューでは共有用URLは更新しない
 
     const applyLocalOnlyBackground = () => {
       setBackground(currentObjUrl, dataURL);
@@ -270,7 +271,7 @@ export function initEditor() {
       return;
     }
 
-    // Ｂ. Supabaseへアップロード（RLSでINSERTのみOK: upsert:false & unique key）
+    // B. Supabase へアップロード（RLS で INSERT のみ可: upsert:false & unique key）
     (async ()=>{
       try {
         const shortId = await hashIdShort(sanitize(inpAddress.value), sanitize(inpSender.value), 10);
@@ -285,7 +286,6 @@ export function initEditor() {
       }
     })();
   }
-
   inpBgFile?.addEventListener('change', async ()=>{
     updateBgFileVisualState();
     let f = inpBgFile.files?.[0]; if(!f) return;
