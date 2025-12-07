@@ -22,39 +22,62 @@
 </head>
 <body>
   <!-- カード表示 -->
-  <div id="card-container" aria-label="クリック / Enter / Space で裏表反転">
-    <div id="card" class="new-year-card" role="button" tabindex="0" aria-pressed="false">
+  <div id="card-container" class="postcard-stage" aria-label="クリック / Enter / Space で裏表反転">
+    <div id="card" class="new-year-card postcard" role="button" tabindex="0" aria-pressed="false" data-print-root="postcard">
       <!-- 表：住所面 -->
-      <section class="side address-side">
+      <section id="postcard-face-front" class="side postcard-face address-side" data-face="front" aria-label="宛名面">
         <!-- 背景ホログラム（画像/文字には非適用） -->
         <div class="bg" aria-hidden="true"></div>
 
-        <img class="stamp" src="./images/kitte.png" alt="切手" />
-        <div class="postal-code">〒□□□-□□□□</div>
-        <div class="address">
-          <span class="address-main">宛名&nbsp;太郎&nbsp;様</span>
+        <img class="stamp print-hide" src="./images/kitte.png" alt="切手" />
+        <div class="postal-code print-hide" id="print-to-postcode" aria-label="郵便番号"><span class="postal-code__prefix" aria-hidden="true">〒</span><span class="postal-code__first" id="to-postcode3" data-print-field="postcode-first">□□□</span><span class="postal-code__separator" aria-hidden="true">-</span><span class="postal-code__last" id="to-postcode4" data-print-field="postcode-last">□□□□</span></div>
+        <div class="address" id="recipient-block" data-print-field="recipient-block">
+          <span class="address-main" id="to-name" data-print-field="recipient-name">宛名&nbsp;太郎&nbsp;様</span>
           <span class="tap-hint__text" aria-hidden="true">タップして裏面を見る</span>
           <div class="tap-hint" aria-hidden="true">
             <span class="tap-hint__circle"></span>
           </div>
         </div>
-        <div class="sender">土井&nbsp;仰輝</div>
+        <div class="sender" id="from-sender" data-print-field="sender-name">土井&nbsp;仰輝</div>
       </section>
 
       <!-- 裏：挨拶面 -->
-      <section class="side greeting-side">
+      <section id="postcard-face-back" class="side postcard-face greeting-side" data-face="back" aria-label="挨拶面">
         <!-- 背景ホログラム -->
         <div class="bg" aria-hidden="true"></div>
 
-        <h1></h1>
-        <img class="new-year-image" src="./images/new-year-image.png" alt="新年イメージ" />
-        <p class="greeting-message">謹んで新春のお慶びを申し上げます。<br>旧年中は格別のご高配を賜り厚く御礼申し上げます。<br>本年もご期待に沿えるよう精進してまいります。</p>
+        <h1 id="greeting-title" data-print-field="greeting-title"></h1>
+        <img id="greeting-photo" class="new-year-image" src="./images/new-year-image.png" alt="新年イメージ" data-print-field="greeting-image" />
+        <p class="greeting-message" id="greeting-body" data-print-field="greeting-body">謹んで新春のお慶びを申し上げます。<br>旧年中は格別のご高配を賜り厚く御礼申し上げます。<br>本年もご期待に沿えるよう精進してまいります。</p>
       </section>
     </div>
+  </div>
+  <p class="print-hint screen-only">印刷するときはブラウザの設定で「背景のグラフィック」を有効にしてください。</p>
+
+  <!-- 印刷専用テンプレート（静的複製用） -->
+  <div id="print-sheet" class="print-sheet print-only" aria-hidden="true" data-print-root="postcard">
+    <section class="print-face print-face--back" data-face="back" style="--bg-image: url('./images/background_sample1.png');">
+      <div class="print-face__bg" aria-hidden="true"></div>
+      <div class="print-face__content">
+        <h1 class="print-greeting-title" data-print-field="greeting-title"></h1>
+        <img class="print-greeting-image new-year-image" src="./images/new-year-image.png" alt="新年イメージ" data-print-field="greeting-image" />
+        <p class="print-greeting-body greeting-message" data-print-field="greeting-body">謹んで新春のお慶びを申し上げます。旧年中は格別のご高配を賜り厚く御礼申し上げます。本年もご期待に沿えるよう精進してまいります。</p>
+      </div>
+    </section>
+    <section class="print-face print-face--front" data-face="front">
+      <div class="print-face__bg" aria-hidden="true"></div>
+      <div class="print-face__content">
+        <div class="address" id="print-recipient-block" data-print-field="recipient-block">
+          <span class="address-main" id="print-to-name" data-print-field="recipient-name">宛名&nbsp;太郎&nbsp;様</span>
+        </div>
+        <div class="sender" id="print-from-sender" data-print-field="sender-name">土井&nbsp;仰輝</div>
+      </div>
+    </section>
   </div>
 
   <!-- 編集UI -->
   <button id="editor-open" class="floating-cta floating-cta--left" aria-label="編集を開く">編集</button>
+  <button id="btn-print" class="floating-cta floating-cta--right pc-only" aria-label="印刷する">印刷</button>
   <div id="editor-overlay" aria-hidden="true">
     <div class="editor-panel" role="dialog" aria-modal="true" aria-labelledby="editor-title">
       <div class="editor-header">

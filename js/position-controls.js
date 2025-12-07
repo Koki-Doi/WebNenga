@@ -7,14 +7,24 @@
 
   const $ = (s, r = document) => r.querySelector(s);
 
+  let baseCardWidth = null;
+  function getCardScale(card) {
+    // 傾き等の transform で変動する boundingClientRect は使わず、layout サイズの offsetWidth を基準にする
+    const w = card ? (card.offsetWidth || card.clientWidth || 0) : 0;
+    if (!baseCardWidth && w) baseCardWidth = w;
+    const base = baseCardWidth || w || 1;
+    return base ? (w || base) / base : 1;
+  }
+
   function applyShifts(imgY, msgY) {
     const card = $('#card');
     const gSide = card ? $('.greeting-side', card) : null;
     const img = gSide ? $('.new-year-image', gSide) : null;
     const msg = gSide ? ($('.greeting-message', gSide) || $('p', gSide)) : null;
+    const scale = getCardScale(card);
 
-    if (img) img.style.translate = `0 ${imgY}px`;
-    if (msg) msg.style.translate = `0 ${msgY}px`;
+    if (img) img.style.translate = `0 ${imgY * scale}px`;
+    if (msg) msg.style.translate = `0 ${msgY * scale}px`;
   }
 
   function loadState() {

@@ -2,6 +2,7 @@
 import { initEditor } from './editor.js';
 import { initCardControls } from './card-controls.js';
 import { initCardEffects } from './card-effects.js';
+import { initPrint } from './print.js';
 
 window.addEventListener('DOMContentLoaded', () => {
   const container = document.getElementById('card-container');
@@ -18,4 +19,5 @@ window.addEventListener('DOMContentLoaded', () => {
   initCardControls({ container, card, isEditorOpen });
   initCardEffects({ container, card });
   initEditor();
+  initPrint();
 });

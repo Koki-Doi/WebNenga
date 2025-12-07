@@ -1,6 +1,6 @@
-// js/editor.js
-// 年賀状エディタ本体（プレビュー即時反映 / Supabaseへ非同期アップロード / CSV一括生成）
-// 依存: utils.js, templates.js, image-utils.js, storage.js, csv-mode.js
+﻿// js/editor.js
+// 蟷ｴ雉迥ｶ繧ｨ繝・ぅ繧ｿ譛ｬ菴難ｼ医・繝ｬ繝薙Η繝ｼ蜊ｳ譎ょ渚譏 / Supabase縺ｸ髱槫酔譛溘い繝・・繝ｭ繝ｼ繝・/ CSV荳諡ｬ逕滓・・・
+// 萓晏ｭ・ utils.js, templates.js, image-utils.js, storage.js, csv-mode.js
 
 import {
   sanitize, escapeHtml, htmlToPlain, plainToHtml,
@@ -18,7 +18,7 @@ import {
 import { uploadBgWebP } from './storage.js';
 import { handleCsvGenerate, parseCSV } from './csv-mode.js';
 
-const SHORT_ID_LEN = 12; // URL用の短いID
+const SHORT_ID_LEN = 12; // URL逕ｨ縺ｮ遏ｭ縺ИD
 
 export function initEditor() {
   const $ = (s) => document.querySelector(s);
@@ -36,7 +36,7 @@ export function initEditor() {
   const closeBtn = $('#editor-close');
   const editorScroll = $('#editor-scroll');
 
-  // 左ペイン（通常モード）
+  // 蟾ｦ繝壹う繝ｳ・磯壼ｸｸ繝｢繝ｼ繝会ｼ・
   const panelText  = $('#panel-text');
   const inpAddress = $('#inp-address');
   const inpHonor   = $('#inp-honorific');
@@ -46,7 +46,7 @@ export function initEditor() {
   const chkPhoto   = $('#chk-photo');
   const chkMsgBg   = $('#chk-msgbg');
 
-  // 背景：サンプル/アップロード/トリミング
+  // 閭梧勹・壹し繝ｳ繝励Ν/繧｢繝・・繝ｭ繝ｼ繝・繝医Μ繝溘Φ繧ｰ
   const sampleGrid   = $('#sample-grid');
   const inpBgFile    = $('#inp-bgfile');
   const bgUploader   = $('#bgfile-uploader');
@@ -56,12 +56,12 @@ export function initEditor() {
   const btnCropApply = $('#btn-crop-apply');
   const btnExport    = $('#btn-export');
 
-  // 共有
+  // 蜈ｱ譛・
   const actionsBar = $('#editor-actions');
   const txtUrl   = $('#share-url');
   const btnCopy  = $('#btn-copy');
 
-  // CSVモード
+  // CSV繝｢繝ｼ繝・
   const btnCsvMode  = $('#btn-csv-mode');
   const csvPanel    = $('#csv-panel');
   const csvFile     = $('#csv-file');
@@ -77,9 +77,9 @@ export function initEditor() {
   updateBgFileVisualState();
 
   // ===== State =====
-  // 表示用（Blob可・プレビュー優先）
+  // 陦ｨ遉ｺ逕ｨ・・lob蜿ｯ繝ｻ繝励Ξ繝薙Η繝ｼ蜆ｪ蜈茨ｼ・
   let selectedBgUrl = './images/background_sample1.png';
-  // 共有用（常に公開URL＝永続URLのみ）
+  // 蜈ｱ譛臥畑・亥ｸｸ縺ｫ蜈ｬ髢偽RL・晄ｰｸ邯啅RL縺ｮ縺ｿ・・
   let stableBgUrl   = './images/background_sample1.png';
 
   let cropper = null;
@@ -90,30 +90,30 @@ export function initEditor() {
   let remoteUploadDisabled = false;
   let uploadFallbackNotified = false;
 
-  // ===== 背景反映ヘルパ =====
+  // ===== 閭梧勹蜿肴丐繝倥Ν繝・=====
   function setBackground(displayUrl, stableUrl) {
-    // プレビューは常に即時に displayUrl を描画
+    // 繝励Ξ繝薙Η繝ｼ縺ｯ蟶ｸ縺ｫ蜊ｳ譎ゅ↓ displayUrl 繧呈緒逕ｻ
     selectedBgUrl = displayUrl || './images/background_sample1.png';
     greeting.style.setProperty('--bg-image', `url("${selectedBgUrl}")`);
-    // 共有用は安定URLが来た時のみ更新
+    // 蜈ｱ譛臥畑縺ｯ螳牙ｮ啅RL縺梧擂縺滓凾縺ｮ縺ｿ譖ｴ譁ｰ
     if (stableUrl) stableBgUrl = stableUrl;
-    // URL再生成
+    // URL蜀咲函謌・
     applyPreviewAndURL();
   }
   function revokeObjUrl() {
     if (currentObjUrl) { URL.revokeObjectURL(currentObjUrl); currentObjUrl = null; }
   }
 
-  // ===== モーダル開閉 =====
+  // ===== 繝｢繝ｼ繝繝ｫ髢矩哩 =====
   const isEditorOpen = () => overlay.getAttribute('aria-hidden') === 'false';
 
-  // エディタ中はカードのキーボード操作を抑止（Enter/Spaceなど）
+  // 繧ｨ繝・ぅ繧ｿ荳ｭ縺ｯ繧ｫ繝ｼ繝峨・繧ｭ繝ｼ繝懊・繝画桃菴懊ｒ謚第ｭ｢・・nter/Space縺ｪ縺ｩ・・
   window.addEventListener('keydown', (e) => {
     if (isEditorOpen() && (e.code === 'Enter' || e.code === 'NumpadEnter' || e.code === 'Space')) {
       e.stopPropagation();
     }
   }, true);
-  // 背景クリックの反転を抑止
+  // 閭梧勹繧ｯ繝ｪ繝・け縺ｮ蜿崎ｻ｢繧呈椛豁｢
   $('#card-container')?.addEventListener('click', (e) => { if (isEditorOpen()) e.stopPropagation(); }, true);
 
   openBtn?.addEventListener('click', (e)=>{
@@ -131,7 +131,7 @@ export function initEditor() {
   closeBtn?.addEventListener('click', (e)=>{ e.stopPropagation(); closeEditor(); });
   overlay?.addEventListener('click', (e)=>{ if (e.target === overlay) closeEditor(); });
 
-  // ===== メッセージテンプレ =====
+  // ===== 繝｡繝・そ繝ｼ繧ｸ繝・Φ繝励Ξ =====
   function buildTemplateOptions(){
     selTpl.innerHTML = '';
     for (const t of MESSAGE_TEMPLATES){
@@ -148,10 +148,10 @@ export function initEditor() {
     currentTplId = t.id;
     inpMessage.value = t.text;
     applyPreviewAndURL();
-    showToast(`テンプレート「${t.label}」を適用しました`);
+    showToast(`繝・Φ繝励Ξ繝ｼ繝医・{t.label}縲阪ｒ驕ｩ逕ｨ縺励∪縺励◆`);
   });
 
-  // ===== 初期フォームへ流し込み =====
+  // ===== 蛻晄悄繝輔か繝ｼ繝縺ｸ豬√＠霎ｼ縺ｿ =====
   (function hydrate(){
     const addrSource = addrMainEl || addrEl;
     const domAddr = (addrSource?.innerText||addrSource?.textContent||'').replace(/\u00a0/g,' ').trim();
@@ -165,7 +165,7 @@ export function initEditor() {
     greeting.style.setProperty('--bg-image', `url("${selectedBgUrl}")`);
   })();
 
-  // ===== 適用 & URL生成 =====
+  // ===== 驕ｩ逕ｨ & URL逕滓・ =====
   function setInvalid(el,on){ el?.classList.toggle('is-invalid',!!on); el?.setAttribute('aria-invalid', on?'true':'false'); }
   function validateRequired(){
     const aOk = !!sanitize(inpAddress.value);
@@ -189,6 +189,28 @@ export function initEditor() {
     return `${base}#id=${id}&data=${enc}`;
   };
 
+  // 謖ｨ諡ｶ髱｢縺ｮ逕ｻ蜒上・繝｡繝・そ繝ｼ繧ｸ菴咲ｽｮ繧ょ・譛峨ョ繝ｼ繧ｿ縺ｫ蜷ｫ繧√ｋ
+  const POS_KEYS = {
+    imgY: 'nenga_img_shift_y_px',
+    msgY: 'nenga_msg_shift_y_px',
+  };
+  const getPosState = () => ({
+    imgY: Number(localStorage.getItem(POS_KEYS.imgY) ?? 0),
+    msgY: Number(localStorage.getItem(POS_KEYS.msgY) ?? 0),
+  });
+  const setPosState = (imgY = 0, msgY = 0) => {
+    localStorage.setItem(POS_KEYS.imgY, String(imgY));
+    localStorage.setItem(POS_KEYS.msgY, String(msgY));
+    const rImg = document.getElementById('range-img-y');
+    const rMsg = document.getElementById('range-msg-y');
+    const oImg = document.getElementById('out-img-y');
+    const oMsg = document.getElementById('out-msg-y');
+    if (rImg) rImg.value = imgY;
+    if (rMsg) rMsg.value = msgY;
+    if (oImg) oImg.textContent = imgY;
+    if (oMsg) oMsg.textContent = msgY;
+  };
+
   const applyPreviewAndURL = debounce(async ()=>{
     validateRequired();
 
@@ -201,15 +223,18 @@ export function initEditor() {
     photoEl.classList.toggle('hidden', !chkPhoto.checked);
     msgEl.classList.toggle('no-bg', !chkMsgBg.checked);
 
-    // 共有用は常に安定URL（blobは入れない）
+    // 蜈ｱ譛臥畑縺ｯ蟶ｸ縺ｫ螳牙ｮ啅RL・・lob縺ｯ蜈･繧後↑縺・ｼ・
     const bgurlForShare = stableBgUrl || './images/background_sample1.png';
+    const { imgY, msgY } = getPosState();
 
     const dataObj = {
       a: address, s: sender, m: message, h: honor,
       bgurl: bgurlForShare,
       pv: chkPhoto.checked ? 1 : 0,
       mbg: chkMsgBg.checked ? 1 : 0,
-      mtid: currentTplId
+      mtid: currentTplId,
+      iy: imgY,
+      my: msgY
     };
 
     const id  = await hashIdShort(address, sender, SHORT_ID_LEN);
@@ -230,24 +255,24 @@ export function initEditor() {
     chkMsgBg.addEventListener(type, applyPreviewAndURL);
   });
 
-  // ===== サンプル背景 =====
+  // ===== 繧ｵ繝ｳ繝励Ν閭梧勹 =====
   sampleGrid?.addEventListener('click', (e)=>{
     const btn = e.target.closest('.sample'); if (!btn) return;
     const src = btn.getAttribute('data-src'); if (!src) return;
-    // プレビュー & 共有同時更新（公開ファイルなのでそのまま安定URL）
+    // 繝励Ξ繝薙Η繝ｼ & 蜈ｱ譛牙酔譎よ峩譁ｰ・亥・髢九ヵ繧｡繧､繝ｫ縺ｪ縺ｮ縺ｧ縺昴・縺ｾ縺ｾ螳牙ｮ啅RL・・
     setBackground(src, src);
     showToast('サンプル背景を適用しました');
     e.stopPropagation();
   });
 
-  // ===== 画像トリミング → プレビュー即時 → バックグラウンドでアップロード（毎回ユニークKey） =====
+  // ===== 逕ｻ蜒上ヨ繝ｪ繝溘Φ繧ｰ 竊・繝励Ξ繝薙Η繝ｼ蜊ｳ譎・竊・繝舌ャ繧ｯ繧ｰ繝ｩ繧ｦ繝ｳ繝峨〒繧｢繝・・繝ｭ繝ｼ繝会ｼ域ｯ主屓繝ｦ繝九・繧ｯKey・・=====
   function destroyCropper(){ if (cropper){ cropper.destroy(); cropper=null; } }
 
 
   async function processCropAndUpload() {
     if (!cropper) return;
 
-    // A. プレビュー用 dataURL を生成
+    // A. 繝励Ξ繝薙Η繝ｼ逕ｨ dataURL 繧堤函謌・
     const cRaw = cropper.getCroppedCanvas({ width: OUT_W, height: OUT_H, imageSmoothingQuality: 'high' });
     const dataURL = encodeImageMax(cRaw, {
       maxKB: 1900, startQ: 0.78, minQ: 0.35, stepQ: 0.06,
@@ -256,12 +281,12 @@ export function initEditor() {
 
     revokeObjUrl();
     currentObjUrl = URL.createObjectURL(dataURLToBlob(dataURL));
-    setBackground(currentObjUrl);  // プレビューでは共有用URLは更新しない
+    setBackground(currentObjUrl);  // 繝励Ξ繝薙Η繝ｼ縺ｧ縺ｯ蜈ｱ譛臥畑URL縺ｯ譖ｴ譁ｰ縺励↑縺・
 
     const applyLocalOnlyBackground = () => {
       setBackground(currentObjUrl, dataURL);
       if (!uploadFallbackNotified) {
-        showToast('外部ストレージに接続できないため、画像をデータURLとして共有に埋め込みます。');
+        showToast('外部ストレージに接続できないため、画像をデータURLとして共有に埋め込みます');
         uploadFallbackNotified = true;
       }
     };
@@ -271,12 +296,12 @@ export function initEditor() {
       return;
     }
 
-    // B. Supabase へアップロード（RLS で INSERT のみ可: upsert:false & unique key）
+    // B. Supabase 縺ｸ繧｢繝・・繝ｭ繝ｼ繝会ｼ・LS 縺ｧ INSERT 縺ｮ縺ｿ蜿ｯ: upsert:false & unique key・・
     (async ()=>{
       try {
         const shortId = await hashIdShort(sanitize(inpAddress.value), sanitize(inpSender.value), 10);
         const publicUrl = await uploadBgWebP(dataURL, shortId);
-        // 成功 → 公開URL更新 & プレビューも安定URLへ
+        // 謌仙粥 竊・蜈ｬ髢偽RL譖ｴ譁ｰ & 繝励Ξ繝薙Η繝ｼ繧ょｮ牙ｮ啅RL縺ｸ
         setBackground(publicUrl, publicUrl);
         showToast('背景をアップロードしてURLを更新しました');
       } catch (err) {
@@ -290,11 +315,11 @@ export function initEditor() {
     updateBgFileVisualState();
     let f = inpBgFile.files?.[0]; if(!f) return;
 
-    // HEIF → JPEG 変換（必要な場合のみ）
+    // HEIF 竊・JPEG 螟画鋤・亥ｿ・ｦ√↑蝣ｴ蜷医・縺ｿ・・
     try { if (isHeifFile(f)) f = await convertHeifToBlob(f); }
     catch { showToast('HEIFの変換に失敗しました'); return; }
 
-    // EXIFの向き補正付きで安全に読み込み（iOS対策）
+    // EXIF縺ｮ蜷代″陬懈ｭ｣莉倥″縺ｧ螳牙・縺ｫ隱ｭ縺ｿ霎ｼ縺ｿ・・OS蟇ｾ遲厄ｼ・
     let srcURL;
     try { srcURL = await normalizeForIOS(f, 4096); }
     catch { srcURL = URL.createObjectURL(f); }
@@ -307,10 +332,10 @@ export function initEditor() {
       responsive: true, background: false, movable: true, zoomable: true,
       checkOrientation: false,
       ready(){
-        // 初回は自動適用（ユーザ操作なしで1回は反映させる）
+        // 蛻晏屓縺ｯ閾ｪ蜍暮←逕ｨ・医Θ繝ｼ繧ｶ謫堺ｽ懊↑縺励〒1蝗槭・蜿肴丐縺輔○繧具ｼ・
         if (!didAutoApply){
           setTimeout(async ()=>{
-            await processCropAndUpload(); // 失敗しても例外を外に出さない
+            await processCropAndUpload(); // 初回の自動適用
             didAutoApply = true;
             showToast('初回トリミングを適用しました');
           }, 30);
@@ -323,37 +348,38 @@ export function initEditor() {
   btnCropReset?.addEventListener('click', ()=> cropper && cropper.reset());
   btnCropApply?.addEventListener('click', async ()=>{ await processCropAndUpload(); });
 
-  // 画像書き出し（確認用）
+  // 逕ｻ蜒乗嶌縺榊・縺暦ｼ育｢ｺ隱咲畑・・
   btnExport?.addEventListener('click', async ()=>{
     const src = stableBgUrl || selectedBgUrl;
-    if (!src){ showToast('背景がありません'); return; }
+    if (!src){ showToast('背景が設定されていません'); return; }
     const blob = await fetch(src).then(r=>r.blob());
     const a = document.createElement('a');
     a.href = URL.createObjectURL(blob); a.download = 'nenga_bg.webp'; a.click();
     setTimeout(()=>URL.revokeObjectURL(a.href), 800);
   });
 
-  // ===== URLコピー =====
+  // ===== URL繧ｳ繝斐・ =====
   btnCopy?.addEventListener('click', async ()=>{
     await applyPreviewAndURL.flush?.();
     const ok = await tryCopy(txtUrl.value);
-    btnCopy.textContent = ok ? 'コピー済' : 'コピー失敗';
+    btnCopy.textContent = ok ? 'コピー成功' : 'コピー失敗';
     setTimeout(()=> (btnCopy.textContent='URLをコピー'), 1200);
     if (ok) showToast('URLをコピーしました');
   });
 
-  // ===== ハッシュ復元 =====
+  // ===== 繝上ャ繧ｷ繝･蠕ｩ蜈・=====
   window.addEventListener('hashchange', bootFromHash);
   bootFromHash();
   async function bootFromHash(){
     const parsed = parseHash(location.hash); if(!parsed){ applyPreviewAndURL(); return; }
     const obj = decodeData(parsed.data); if(!obj) return;
-    const { a, s, m, h='様', bgurl=null, pv=1, mbg=1, mtid='std1' } = obj;
+    const { a, s, m, h='様', bgurl=null, pv=1, mbg=1, mtid='std1', iy=0, my=0 } = obj;
 
     const address = a ?? ''; const sender = s ?? ''; const message = m ?? ''; const honor = h ?? '様';
     applyToDOM(address, sender, message, honor);
+    setPosState(iy || 0, my || 0);
 
-    // 復元時は display/stable を同じ安定URLに
+    // 蠕ｩ蜈・凾縺ｯ display/stable 繧貞酔縺伜ｮ牙ｮ啅RL縺ｫ
     const initBg = bgurl || './images/background_sample1.png';
     setBackground(initBg, initBg);
 
@@ -368,17 +394,18 @@ export function initEditor() {
     applyPreviewAndURL();
   }
 
-  // ===== CSVモード =====
+  // ===== CSV繝｢繝ｼ繝・=====
   function setCsvMode(on){
     csvOpen = !!on;
     csvPanel.style.display = csvOpen ? 'block' : 'none';
     panelText.style.display = csvOpen ? 'none' : '';
     actionsBar.style.display = csvOpen ? 'none' : '';
     btnCsvMode.setAttribute('aria-pressed', csvOpen ? 'true' : 'false');
-    btnCsvMode.textContent = csvOpen ? 'CSVモード解除' : 'CSVモード';
+    btnCsvMode.textContent = csvOpen ? 'CSVモード終了' : 'CSVモード';
     if (csvOpen){
-      csvSummary.textContent = 'CSV未選択';
-      csvPreview.value=''; csvGenerate.disabled = true;
+      csvSummary.textContent = 'CSVを読み込んでください';
+      csvPreview.value='';
+      csvGenerate.disabled = true;
       setTimeout(()=> csvFile?.focus(), 0);
     }
   }
@@ -386,21 +413,23 @@ export function initEditor() {
   csvExit?.addEventListener('click', ()=> setCsvMode(false));
 
   csvFile?.addEventListener('change', async ()=>{
-    csvGenerate.disabled = true; csvSummary.textContent = 'CSV未選択'; csvPreview.value='';
+    csvGenerate.disabled = true;
+    csvSummary.textContent = 'CSVを読み込み中…';
+    csvPreview.value='';
     const f = csvFile.files?.[0]; if (!f) return;
     if (!/\.csv$/i.test(f.name) && (f.type && f.type.indexOf('csv') === -1)) { showToast('CSVファイルを選択してください'); return; }
     const text = await f.text(); const rows = parseCSV(text);
-    if (!rows.length) { showToast('CSVを解析できませんでした'); return; }
-    csvSummary.textContent = `読み込み：${f.name}（${rows.length} 行）`;
+    if (!rows.length) { showToast('CSVの読み込みに失敗しました'); return; }
+    csvSummary.textContent = `${f.name}（${rows.length} 件）を読み込みました`;
     csvPreview.value = rows.slice(0, 10).map(r => r.join(',')).join('\n');
     csvGenerate.disabled = false;
   });
 
   csvGenerate?.addEventListener('click', async ()=>{
-    const f = csvFile?.files?.[0]; if (!f) { showToast('CSVが選択されていません'); return; }
+    const f = csvFile?.files?.[0]; if (!f) { showToast('CSVを選択してください'); return; }
     await handleCsvGenerate({
       file: f,
-      currentBgUrl: stableBgUrl,                  // 共有は常に安定URL
+      currentBgUrl: stableBgUrl,                  // 蜈ｱ譛峨・蟶ｸ縺ｫ螳牙ｮ啅RL
       buildUrl: (obj, id)=>{
         const enc  = encodeData(obj);
         const base = location.href.split('#')[0];
@@ -409,3 +438,13 @@ export function initEditor() {
     });
   });
 }
+
+
+
+
+
+
+
+
+
+

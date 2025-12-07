@@ -3,7 +3,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
 // ★あなたの情報
 export const SUPABASE_URL = 'https://mabggyxwheluuopysqhi.supabase.co';
-export const SUPABASE_ANON_KEY = 'sb_publishable_kSZyQ6TDUvLvXVqA302U5g_NMTtwK7O';
+export const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1hYmdneXh3aGVsdXVvcHlzcWhpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjAyNDk1MzMsImV4cCI6MjA3NTgyNTUzM30.q6VOi2b_3DPF8G9P4VicoURZhbDCcejDL9DMT9S7gUE';
 
 // バケット名
 const BUCKET = 'nenga';
