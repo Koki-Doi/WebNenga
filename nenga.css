@@ -80,9 +80,11 @@ html, body {
   position: relative; transform-style: preserve-3d;
   transition: transform 0.6s cubic-bezier(.2,.8,.2,1); border: none;
   aspect-ratio: 100 / 148;
+  --card-width-base: 350px;
   --card-width: 350px;
-  --card-scale: calc(var(--card-width) / 350);
-  --card-font-base: calc(12px * var(--card-scale));
+  --card-scale: calc(var(--card-width) / var(--card-width-base));
+  /* Scale greeting font with card width: 350px -> 14px, 600px -> 24px */
+  --card-font-base: calc(14px * var(--card-scale));
   --card-title-size: calc(16px * var(--card-scale));
   width: var(--card-width);
   height: calc(var(--card-width) * 1.48);        
@@ -235,10 +237,10 @@ html.editing-open .tap-hint__text {
 
   transform: rotateY(180deg) translateZ(0);
   display: flex; align-items: center; justify-content: center; flex-direction: column;
-  padding: 20px;
+  padding: calc(20px * var(--card-scale));
 }
 .greeting-side h1 {
-  margin: 16px 0 12px;
+  margin: calc(16px * var(--card-scale)) 0 calc(12px * var(--card-scale));
   font-family: 'Hiragino Mincho ProN','Yu Mincho',serif;
   font-weight: 800; letter-spacing: .08em; color: #b23a1e;
   text-shadow: 1px 1px 2px rgba(0,0,0,.35);
@@ -260,7 +262,8 @@ html.editing-open .tap-hint__text {
   
   width: 28ic;
 
-  margin: 10px 0 18px; padding: .9em 1.1em; line-height: 1.9; text-align: center;
+  margin: calc(10px * var(--card-scale)) 0 calc(18px * var(--card-scale));
+  padding: .9em 1.1em; line-height: 1.9; text-align: center;
   color: #1a1a1a; background: #ffffff !important;
   border-radius: 10px; box-shadow: 0 4px 16px rgba(0,0,0,.18);
   -webkit-backdrop-filter: none; backdrop-filter: none;
@@ -277,7 +280,8 @@ html.editing-open .tap-hint__text {
 .new-year-image {
   display: block; margin-left: auto; margin-right: auto;
   width: min(95%, 1065px); height: auto; max-height: 70%;
-  margin-bottom: 14px; margin-top: -2.5cqh; border-radius: 6px;
+  margin-bottom: calc(14px * var(--card-scale));
+  margin-top: -2.5cqh; border-radius: 6px;
   position: relative; z-index: 1;
   will-change: transform; transform: translateZ(0); transition: translate 80ms linear;
 }

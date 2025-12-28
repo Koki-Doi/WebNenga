@@ -9,14 +9,14 @@
 
 (() => {
   const SELECTOR = '.greeting-side .greeting-message, .greeting-side p.greeting-message, .greeting-side > p';
-  const BASE_PX = 18;     // 計測用の基準フォントサイズ(px)
-  const MIN_PX  = 12;     // 下限
-  const MAX_PX  = 40;     // 上限
+  const MIN_SCALE = 12 / 18; // Keep legacy min relative to old 18px base
+  const MAX_SCALE = 1;       // Do not grow beyond base size
   const MARGIN  = 2;      // 余白（はみ出し安全マージン）
 
   const $ = (s, r = document) => r.querySelector(s);
 
   let baseMaxLinePx = null;   // 基準サイズで測った「最長行の幅(px)」
+  let baseMeasurePx = null;   // Font size used for baseline measurement
   let lastHtml = '';          // 前回の本文（変化検知用）
   let moText = null, roCard = null;
   let debouncedResize = null;
@@ -26,6 +26,14 @@
   }
 
   // 挨拶文の「内側実効幅」を取得（padding込みでOK）
+  function getBaseFontPx(el) {
+    const prev = el.style.fontSize;
+    if (prev) el.style.fontSize = '';
+    const basePx = parseFloat(getComputedStyle(el).fontSize) || 0;
+    if (prev) el.style.fontSize = prev;
+    return basePx;
+  }
+
   function getAvailWidth(el) {
     return Math.floor(el.getBoundingClientRect().width);
   }
@@ -64,20 +72,29 @@
 
   // 本文が変わった時だけ 1回だけ実測
   function recomputeBaseline(el) {
-    // 一旦固定pxにしてから測る（cqh等の相対指定を排除）
-    const prev = el.style.fontSize;
-    el.style.fontSize = `${BASE_PX}px`;
-    baseMaxLinePx = measureMaxLinePx(el, BASE_PX);
-    el.style.fontSize = prev || '';
+    const basePx = getBaseFontPx(el);
+    if (!basePx) return;
+    baseMeasurePx = basePx;
+    baseMaxLinePx = measureMaxLinePx(el, basePx);
   }
 
   // リサイズやカードスケール時は「幅の比」で比例決定（採寸なし）
   function applyProportional(el) {
     if (baseMaxLinePx == null || baseMaxLinePx === 0) return;
+    const basePx = getBaseFontPx(el);
+    if (!basePx) return;
     const avail = getAvailWidth(el);
-    // (利用可能幅-マージン) / 基準行幅 * BASE_PX
-    const px = Math.max(MIN_PX, Math.min(MAX_PX, Math.floor(((avail - MARGIN) / baseMaxLinePx) * BASE_PX)));
-    el.style.fontSize = `${px}px`;
+    const scaleBase = baseMeasurePx ? (basePx / baseMeasurePx) : 1;
+    const scaledBaseLinePx = baseMaxLinePx * scaleBase;
+    if (scaledBaseLinePx <= 0) return;
+    // Scale down only when the base size would overflow.
+    const ratio = (avail - MARGIN) / scaledBaseLinePx;
+    const scale = Math.max(MIN_SCALE, Math.min(MAX_SCALE, ratio));
+    if (scale >= 1) {
+      el.style.fontSize = '';
+      return;
+    }
+    el.style.fontSize = `${Math.floor(basePx * scale)}px`;
   }
 
   function refresh(el) {
