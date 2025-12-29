@@ -194,6 +194,7 @@ export function initEditor() {
     imgY: 'nenga_img_shift_y_px',
     msgY: 'nenga_msg_shift_y_px',
   };
+  const POS_CHANGE_EVENT = 'nenga:position-change';
   const getPosState = () => ({
     imgY: Number(localStorage.getItem(POS_KEYS.imgY) ?? 0),
     msgY: Number(localStorage.getItem(POS_KEYS.msgY) ?? 0),
@@ -211,7 +212,9 @@ export function initEditor() {
     if (oMsg) oMsg.textContent = msgY;
   };
 
-  const applyPreviewAndURL = debounce(async ()=>{
+  let applySeq = 0;
+  const applyPreviewAndURLCore = async ()=>{
+    const seq = ++applySeq;
     validateRequired();
 
     const address = sanitize(inpAddress.value);
@@ -238,13 +241,15 @@ export function initEditor() {
     };
 
     const id  = await hashIdShort(address, sender, SHORT_ID_LEN);
+    if (seq !== applySeq) return;
     const url = buildShareURL(dataObj, id);
 
     if (!csvOpen){
       if (history.replaceState) history.replaceState(null,'', url); else location.hash = url.split('#')[1];
       txtUrl.value = url;
     }
-  }, 80);
+  };
+  const applyPreviewAndURL = debounce(applyPreviewAndURLCore, 80);
 
   ['input','change'].forEach(type=>{
     inpAddress.addEventListener(type, applyPreviewAndURL);
@@ -253,6 +258,9 @@ export function initEditor() {
     inpMessage.addEventListener(type, applyPreviewAndURL);
     chkPhoto.addEventListener(type, applyPreviewAndURL);
     chkMsgBg.addEventListener(type, applyPreviewAndURL);
+  });
+  window.addEventListener(POS_CHANGE_EVENT, () => {
+    applyPreviewAndURLCore();
   });
 
   // ===== 繧ｵ繝ｳ繝励Ν閭梧勹 =====

@@ -32,6 +32,11 @@
     return Math.min(max, Math.max(min, value));
   }
 
+  const POS_CHANGE_EVENT = 'nenga:position-change';
+  function emitPositionChange(detail) {
+    window.dispatchEvent(new CustomEvent(POS_CHANGE_EVENT, { detail }));
+  }
+
   function getGreetingElements(card) {
     const gSide = card ? $('.greeting-side', card) : null;
     const img = gSide ? $('.new-year-image', gSide) : null;
@@ -241,6 +246,7 @@
       saveState({ imgY: vImg, msgY: vMsg, baseW });
       const synced = syncRangesAndClamp();
       applyShifts(synced.imgY, synced.msgY);
+      emitPositionChange({ imgY: synced.imgY, msgY: synced.msgY });
     };
     rImg.addEventListener('input', onInput);
     rMsg.addEventListener('input', onInput);
@@ -250,6 +256,7 @@
       saveState({ imgY: 0, msgY: 0, baseW });
       const synced = syncRangesAndClamp();
       applyShifts(synced.imgY, synced.msgY);
+      emitPositionChange({ imgY: synced.imgY, msgY: synced.msgY });
     });
 
     // DOM差し替えに追従（トリミング後の画像入替／本文再描画）
