@@ -255,5 +255,38 @@
   <script type="module" src="./js/position-controls.js"></script>
   <!-- 軽量オートフィット（本文変更時のみ計測／リサイズは比例適用） -->
   <script type="module" src="./js/message-autofit-lite.js"></script>
+  
+  <script>
+  // イベント送信ヘルパ
+  function track(eventName, params = {}) {
+    if (typeof gtag === "function") {
+      gtag("event", eventName, params);
+    }
+  }
+
+  // 例：編集開始ボタン（#startBtn）を押したら計測
+  document.addEventListener("DOMContentLoaded", () => {
+    const startBtn = document.querySelector("#startBtn");
+    if (startBtn) {
+      startBtn.addEventListener("click", () => {
+        track("start_edit");
+      });
+    }
+  });
+
+  // 例：作成完了時に呼ぶ関数（生成完了のタイミングで呼べ）
+  function onCreateComplete(templateName, renderMs) {
+    track("create_complete", {
+      template: templateName,
+      render_ms: renderMs
+    });
+  }
+
+  // 例：共有ボタン（#shareBtn）を押したら計測
+  function onShare(method) {
+    track("share_click", { method }); // method: "webshare" / "clipboard" など
+  }
+</script>
+
 </body>
 </html>
