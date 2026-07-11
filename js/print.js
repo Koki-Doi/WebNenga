@@ -112,7 +112,7 @@ function verticalizeElements(selectors) {
   return () => restore.reverse().forEach((r) => r());
 }
 
-async function captureElement(el, { hideSelectors = [], beforeCapture } = {}) {
+async function captureElement(el, { hideSelectors = [], beforeCapture, width, height, scale } = {}) {
   if (!el) throw new Error('印刷対象のカードが見つかりません');
 
   const root = document.documentElement;
@@ -123,10 +123,10 @@ async function captureElement(el, { hideSelectors = [], beforeCapture } = {}) {
   const restoreBefore = beforeCapture ? beforeCapture() : () => {};
 
   const html2canvas = await loadHtml2Canvas();
-  // ハガキ実寸（100x148mm相当）で固定キャプチャし、印刷時の余白をなくす
-  const targetWidth = 600;
-  const targetHeight = 888; // 600 * 1.48
-  const scale = Math.min(3, Math.max(1, (window.devicePixelRatio || 1)));
+  // 既定はハガキ実寸（100x148mm相当）で固定キャプチャし、印刷時の余白をなくす
+  const targetWidth = width ?? 600;
+  const targetHeight = height ?? 888; // 600 * 1.48
+  const targetScale = scale ?? Math.min(3, Math.max(1, (window.devicePixelRatio || 1)));
 
   const run = await withTempStyles(
     [el],
@@ -140,7 +140,7 @@ async function captureElement(el, { hideSelectors = [], beforeCapture } = {}) {
     async () => {
       const canvas = await html2canvas(el, {
         backgroundColor: '#fff',
-        scale,
+        scale: targetScale,
         useCORS: true,
         logging: false,
         scrollX: 0,
@@ -207,11 +207,18 @@ async function printAsImage(popup) {
 
 // ガチャ演出用: 画面表示と同一レイアウトのまま表裏をデータURL化する
 // （印刷と違い、切手・郵便番号は残し、挨拶文パネルの半透明も画面のままにする）
+// フォントの計算pxは現在のカード幅に対して決まっているため、600px固定ではなく
+// 「画面上の実寸」のまま撮り、解像度は html2canvas の scale で確保する
 export async function captureCardFaces() {
   const greetingEl = document.querySelector(GREETING_SELECTOR);
   const addressEl = document.querySelector(ADDRESS_SELECTOR);
-  const back = await captureElement(greetingEl, {});
+  const rect = document.getElementById('card')?.getBoundingClientRect();
+  const w = Math.round(rect?.width || 600);
+  const h = Math.round(rect?.height || w * 1.48);
+  const scale = Math.min(4, Math.max(1.2, 1100 / h));
+  const back = await captureElement(greetingEl, { width: w, height: h, scale });
   const front = await captureElement(addressEl, {
+    width: w, height: h, scale,
     hideSelectors: ['.tap-hint', '.tap-hint__text'],
     beforeCapture: () => verticalizeElements(['.address-main', '.sender']),
   });
