@@ -26,15 +26,15 @@ export function initCardControls({ container, card, isEditorOpen }) {
     card.classList.add('tap-hint-dismissed');
   };
 
+  // 編集パネル表示中もカードは見えているので、タップ/スワイプでの反転は許可する。
+  // （Enter/Space はフォーム入力と衝突するため handleKeyDown 側で抑止）
   const toggle = (direction = null) => {
-    if (isEditorOpen()) return;
     markTapHintDismissed();
     if (direction != null) setFlipDirection(direction);
     applyFlipState(!getIsFlipped());
   };
 
   const handleClick = () => {
-    if (isEditorOpen()) return;
     toggle();
   };
 
@@ -73,7 +73,6 @@ export function initCardControls({ container, card, isEditorOpen }) {
   let startY = null;
 
   const handleTouchStart = (e) => {
-    if (isEditorOpen()) return;
     if (e.touches.length !== 1) {
       startX = null;
       startY = null;
@@ -85,7 +84,6 @@ export function initCardControls({ container, card, isEditorOpen }) {
   };
 
   const handleTouchEnd = (e) => {
-    if (isEditorOpen()) return;
     if (startX == null || startY == null) return;
     const t = e.changedTouches?.[0];
     const sx = startX;

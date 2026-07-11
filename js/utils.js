@@ -45,9 +45,9 @@ export function showToast(msg, ms = 1600) {
   const t = document.getElementById('toast');
   if (!t) return;
   t.textContent = msg;
-  t.style.display = 'block';
+  t.classList.add('is-show');
   clearTimeout(showToast._to);
-  showToast._to = setTimeout(() => (t.style.display = 'none'), ms);
+  showToast._to = setTimeout(() => t.classList.remove('is-show'), ms);
 }
 
 export function showBusy(text = '処理中です…') {

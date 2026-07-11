@@ -25,6 +25,8 @@
   <meta name="twitter:domain" content="Koki-Doi.github.io" />
   <link rel="canonical" href="https://Koki-Doi.github.io/WebNenga/" />
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+  <meta name="theme-color" content="#f2efe9" />
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%8E%8D%3C/text%3E%3C/svg%3E" />
   <link rel="stylesheet" href="nenga.css" />
   <link rel="stylesheet" href="https://unpkg.com/cropperjs@1.6.2/dist/cropper.min.css">
   <!-- 改行位置の差異を抑えるため同一フォントを読み込み -->
@@ -73,7 +75,6 @@
       </section>
     </div>
   </div>
-  <p class="print-hint screen-only">印刷するときはブラウザの設定で「背景のグラフィック」を有効にしてください。</p>
 
   <!-- 印刷専用テンプレート（静的複製用） -->
   <div id="print-sheet" class="print-sheet print-only" aria-hidden="true" data-print-root="postcard">
@@ -97,12 +98,21 @@
   </div>
 
   <!-- 編集UI -->
-  <button id="editor-open" class="floating-cta floating-cta--left" aria-label="編集を開く">編集</button>
-  <button id="btn-print" class="floating-cta floating-cta--right pc-only" aria-label="印刷する">印刷</button>
+  <button id="editor-open" class="floating-cta floating-cta--left" aria-label="編集を開く">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17 3a2.8 2.8 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg>
+    編集
+  </button>
+  <button id="btn-print" class="floating-cta floating-cta--right pc-only" aria-label="印刷する">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9V2h12v7"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+    印刷
+  </button>
   <div id="editor-overlay" aria-hidden="true">
-    <div class="editor-panel" role="dialog" aria-modal="true" aria-labelledby="editor-title">
+    <div class="editor-panel" role="dialog" aria-modal="false" aria-labelledby="editor-title">
       <div class="editor-header">
-        <h2 id="editor-title">Web年賀状エディタ</h2>
+        <div>
+          <h2 id="editor-title">Web年賀状エディタ</h2>
+          <p class="editor-hint">変更はカードに即反映／カードをタップで裏表切替</p>
+        </div>
         <button id="editor-close" aria-label="閉じる">×</button>
       </div>
 
@@ -171,20 +181,20 @@
 
           <div class="sample-wrap">
             <div class="sample-grid" id="sample-grid">
-              <button type="button" class="sample" data-src="./images/background_sample1.png" aria-label="サンプル1">
-                <img src="./images/background_sample1.png" alt="sample1">
+              <button type="button" class="sample" data-src="./images/background_sample1.png" aria-label="背景サンプル1を適用">
+                <img src="./images/background_sample1.png" alt="背景サンプル1">
               </button>
-              <button type="button" class="sample" data-src="./images/background_sample2.png" aria-label="サンプル2">
-                <img src="./images/background_sample2.png" alt="sample2">
+              <button type="button" class="sample" data-src="./images/background_sample2.png" aria-label="背景サンプル2を適用">
+                <img src="./images/background_sample2.png" alt="背景サンプル2">
               </button>
-              <button type="button" class="sample" data-src="./images/background_sample3.png" aria-label="サンプル3">
-                <img src="./images/background_sample3.png" alt="sample3">
+              <button type="button" class="sample" data-src="./images/background_sample3.png" aria-label="背景サンプル3を適用">
+                <img src="./images/background_sample3.png" alt="背景サンプル3">
               </button>
-              <button type="button" class="sample" data-src="./images/background_sample4.png" aria-label="サンプル4">
-                <img src="./images/background_sample4.png" alt="sample4">
+              <button type="button" class="sample" data-src="./images/background_sample4.png" aria-label="背景サンプル4を適用">
+                <img src="./images/background_sample4.png" alt="背景サンプル4">
               </button>
-              <button type="button" class="sample" data-src="./images/background_sample5.png" aria-label="サンプル5">
-                <img src="./images/background_sample5.png" alt="sample5">
+              <button type="button" class="sample" data-src="./images/background_sample5.png" aria-label="背景サンプル5を適用">
+                <img src="./images/background_sample5.png" alt="背景サンプル5">
               </button>
             </div>
             <div class="hint">サンプルをクリックで即適用／共有リンクにも反映されます。</div>
@@ -235,8 +245,12 @@
       </div>
       <!-- 標準モード専用：URLコピー欄（CSVモード時は非表示にする） -->
       <div class="editor-actions" id="editor-actions">
-        <input id="share-url" type="text" readonly placeholder="生成された短いURL（自動更新）" />
+        <input id="share-url" type="text" readonly placeholder="共有用URL（自動更新）" aria-label="共有用URL" />
         <button id="btn-copy" class="primary" title="URLをコピー">URLをコピー</button>
+        <button id="btn-share" type="button" title="共有" aria-label="共有する">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="m8.6 13.5 6.8 4M15.4 6.5l-6.8 4"/></svg>
+          共有
+        </button>
       </div>
     </div>
   </div>

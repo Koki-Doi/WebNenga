@@ -60,6 +60,7 @@ export function initEditor() {
   const actionsBar = $('#editor-actions');
   const txtUrl   = $('#share-url');
   const btnCopy  = $('#btn-copy');
+  const btnShare = $('#btn-share');
 
   // CSV繝｢繝ｼ繝・
   const btnCsvMode  = $('#btn-csv-mode');
@@ -75,6 +76,17 @@ export function initEditor() {
     bgUploader?.classList.toggle('uploader--has-file', hasFile);
   };
   updateBgFileVisualState();
+
+  // 選択中のサンプル背景へチェック表示を同期
+  const toAbsUrl = (u) => { try { return new URL(u, location.href).href; } catch { return null; } };
+  function syncSampleSelection(url) {
+    if (!sampleGrid) return;
+    const abs = url ? toAbsUrl(url) : null;
+    sampleGrid.querySelectorAll('.sample').forEach((btn) => {
+      const btnAbs = toAbsUrl(btn.getAttribute('data-src') || '');
+      btn.classList.toggle('is-selected', !!abs && !!btnAbs && btnAbs === abs);
+    });
+  }
 
   // ===== State =====
   // 陦ｨ遉ｺ逕ｨ・・lob蜿ｯ繝ｻ繝励Ξ繝薙Η繝ｼ蜆ｪ蜈茨ｼ・
@@ -95,6 +107,7 @@ export function initEditor() {
     // 繝励Ξ繝薙Η繝ｼ縺ｯ蟶ｸ縺ｫ蜊ｳ譎ゅ↓ displayUrl 繧呈緒逕ｻ
     selectedBgUrl = displayUrl || './images/background_sample1.png';
     greeting.style.setProperty('--bg-image', `url("${selectedBgUrl}")`);
+    syncSampleSelection(stableUrl || selectedBgUrl);
     // 蜈ｱ譛臥畑縺ｯ螳牙ｮ啅RL縺梧擂縺滓凾縺ｮ縺ｿ譖ｴ譁ｰ
     if (stableUrl) stableBgUrl = stableUrl;
     // URL蜀咲函謌・
@@ -114,7 +127,7 @@ export function initEditor() {
     }
   }, true);
   // 閭梧勹繧ｯ繝ｪ繝・け縺ｮ蜿崎ｻ｢繧呈椛豁｢
-  $('#card-container')?.addEventListener('click', (e) => { if (isEditorOpen()) e.stopPropagation(); }, true);
+  // ※ カードはパネル表示中も見えているため、クリック反転は抑止しない（ライブプレビュー）
 
   openBtn?.addEventListener('click', (e)=>{
     e.stopPropagation();
@@ -127,9 +140,35 @@ export function initEditor() {
     overlay.setAttribute('aria-hidden','true');
     document.documentElement.classList.remove('editing-open');
     document.body.classList.remove('editing-open');
+    openBtn?.focus({ preventScroll: true });
   }
   closeBtn?.addEventListener('click', (e)=>{ e.stopPropagation(); closeEditor(); });
   overlay?.addEventListener('click', (e)=>{ if (e.target === overlay) closeEditor(); });
+  window.addEventListener('keydown', (e)=>{
+    if (e.key === 'Escape' && isEditorOpen()) closeEditor();
+  });
+
+  // ===== 編集項目に応じてカードの表裏を自動で切り替え =====
+  const cardEl = document.getElementById('card');
+  function setCardFace(showBack) {
+    if (!cardEl) return;
+    if (cardEl.classList.contains('flipped') === showBack) return;
+    cardEl.classList.toggle('flipped', showBack);
+    cardEl.setAttribute('aria-pressed', showBack ? 'true' : 'false');
+  }
+  const FRONT_FIELD_SEL = '#inp-address, #inp-honorific, #inp-sender';
+  const BACK_FIELD_SEL = [
+    '#inp-message', '#sel-message-template', '#chk-photo', '#chk-msgbg',
+    '.sample', '#bgfile-uploader', '#panel-position-controls',
+  ].join(', ');
+  const autoFlipForTarget = (t) => {
+    if (!(t instanceof Element)) return;
+    if (t.closest(FRONT_FIELD_SEL)) setCardFace(false);
+    else if (t.closest(BACK_FIELD_SEL)) setCardFace(true);
+  };
+  ['focusin', 'pointerdown'].forEach((type)=>{
+    overlay?.addEventListener(type, (e)=> autoFlipForTarget(e.target));
+  });
 
   // ===== 繝｡繝・そ繝ｼ繧ｸ繝・Φ繝励Ξ =====
   function buildTemplateOptions(){
@@ -163,6 +202,7 @@ export function initEditor() {
     chkMsgBg.checked = !msgEl.classList.contains('no-bg');
 
     greeting.style.setProperty('--bg-image', `url("${selectedBgUrl}")`);
+    syncSampleSelection(selectedBgUrl);
   })();
 
   // ===== 驕ｩ逕ｨ & URL逕滓・ =====
@@ -374,6 +414,20 @@ export function initEditor() {
     setTimeout(()=> (btnCopy.textContent='URLをコピー'), 1200);
     if (ok) showToast('URLをコピーしました');
   });
+
+  // タップでURL全選択（手動コピー用）
+  txtUrl?.addEventListener('focus', ()=> txtUrl.select());
+
+  // ===== OSの共有シート（対応環境のみ表示） =====
+  if (btnShare && typeof navigator.share === 'function') {
+    btnShare.classList.add('is-available');
+    btnShare.addEventListener('click', async ()=>{
+      await applyPreviewAndURL.flush?.();
+      try {
+        await navigator.share({ title: 'Web年賀状', text: '年賀状が届いています', url: txtUrl.value });
+      } catch { /* ユーザーによるキャンセルは無視 */ }
+    });
+  }
 
   // ===== 繝上ャ繧ｷ繝･蠕ｩ蜈・=====
   window.addEventListener('hashchange', bootFromHash);

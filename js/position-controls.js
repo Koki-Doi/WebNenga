@@ -110,40 +110,29 @@
     const sec = document.createElement('section');
     sec.className = 'group';
     sec.id = 'panel-position-controls';
-    // 背景設定パネルの空きスペースに馴染むよう、最小の内連スタイルだけ付与
-    sec.style.marginTop = '12px';
-    sec.style.border = '1px solid rgba(0,0,0,0.06)';
-    sec.style.borderRadius = '8px';
-    sec.style.padding = '12px';
 
     sec.innerHTML = `
-      <h3 class="group-title" style="margin:0 0 8px;">位置調整（挨拶面）</h3>
+      <h3 class="group-title">位置調整（挨拶面）</h3>
 
-      <div class="stack" style="display:grid;gap:6px;">
-        <label class="stack" style="display:grid;gap:6px;">
-          <span class="label" style="font-weight:600;">画像（px）</span>
-          <div class="row" style="display:flex;align-items:center;gap:8px;">
-            <input id="range-img-y" type="range" min="-300" max="300" step="1" value="0" style="flex:1;">
-            <output id="out-img-y" style="min-width:5ch;text-align:right;">0</output>
-          </div>
-          <div class="hint" style="font-size:12px;color:#666;">上へマイナス／下へプラス</div>
-        </label>
-      </div>
+      <label class="stack">
+        <span class="label">画像の縦位置（px）</span>
+        <div class="row">
+          <input id="range-img-y" type="range" min="-300" max="300" step="1" value="0">
+          <output id="out-img-y">0</output>
+        </div>
+      </label>
 
-      <div class="stack" style="display:grid;gap:6px;margin-top:8px;">
-        <label class="stack" style="display:grid;gap:6px;">
-          <span class="label" style="font-weight:600;">挨拶文（px）</span>
-          <div class="row" style="display:flex;align-items:center;gap:8px;">
-            <input id="range-msg-y" type="range" min="-300" max="300" step="1" value="0" style="flex:1;">
-            <output id="out-msg-y" style="min-width:5ch;text-align:right;">0</output>
-          </div>
-          <div class="hint" style="font-size:12px;color:#666;">上へマイナス／下へプラス</div>
-        </label>
-      </div>
+      <label class="stack">
+        <span class="label">挨拶文の縦位置（px）</span>
+        <div class="row">
+          <input id="range-msg-y" type="range" min="-300" max="300" step="1" value="0">
+          <output id="out-msg-y">0</output>
+        </div>
+      </label>
 
-      <div class="row" style="display:flex;align-items:center;gap:8px;margin-top:10px;">
-        <button id="btn-pos-reset" type="button">リセット</button>
-        <span class="hint" style="font-size:12px;color:#666;">プレビュー＝実表示に即時反映</span>
+      <div class="row">
+        <button id="btn-pos-reset" type="button" class="small">リセット</button>
+        <span class="hint">上へマイナス／下へプラス。カードに即反映されます。</span>
       </div>
     `;
     return sec;
@@ -177,22 +166,17 @@
   }
 
   function injectPanel() {
-    const { editorHost, bgSection, rightCol } = findBackgroundEditorHost();
+    const { editorHost, bgSection } = findBackgroundEditorHost();
     if (!editorHost) return;
     if ($('#panel-position-controls')) return; // 二重挿入防止
 
     const sec = buildPanel();
 
-    if (rightCol && rightCol.contains($('#cropper') || rightCol.querySelector('.cropper'))) {
-      // 最優先：クロッパーと同じ“右カラム”の**直下**に挿入（＝空いているスペースに内包）
-      //   - まず #cropper のブロック末尾を探す（ボタン群を含む親要素の後）
-      const cropBlock = ($('#cropper') && $('#cropper').closest('div, section, .block, .panel, .pane')) || rightCol;
-      cropBlock.insertAdjacentElement('afterend', sec);
-    } else if (bgSection && bgSection.parentElement) {
-      // フォールバック1：背景セクション直後
+    if (bgSection && bgSection.parentElement) {
+      // 背景セクションの直後に「兄弟の設定グループ」として並べる
       bgSection.insertAdjacentElement('afterend', sec);
     } else {
-      // フォールバック2：エディタ末尾
+      // フォールバック：エディタ末尾
       editorHost.appendChild(sec);
     }
 

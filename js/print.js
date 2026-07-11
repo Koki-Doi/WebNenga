@@ -2,7 +2,7 @@
 // カードを画像化して印刷する（裏面=挨拶面、表面=宛名面）
 const GREETING_SELECTOR = '.greeting-side';
 const ADDRESS_SELECTOR = '.address-side';
-const ADDRESS_HIDE_SELECTORS = ['.stamp', '.postal-code'];
+const ADDRESS_HIDE_SELECTORS = ['.stamp', '.postal-code', '.tap-hint', '.tap-hint__text'];
 
 let html2canvasLoader = null;
 function loadHtml2Canvas() {

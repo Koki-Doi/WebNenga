@@ -1,10 +1,14 @@
 ﻿/* 基本レイアウトの初期化と共通背景 */
 :root {
   --brand-red: #c7001e;
+  --brand-red-soft: #fdeef0;
   --brand-dark: #1d1d1d;
-  --brand-gray: #f4f5f7;
+  --brand-gray: #f2efe9; /* 和紙調の暖色グレー */
   --border-soft: #dcdfe3;
   --text-muted: #4b5563;
+  --focus-ring: 0 0 0 3px rgba(199, 0, 30, .18);
+  --editor-dock-w: min(480px, 44vw); /* PC時にエディタが占める右ドック幅 */
+  --sheet-h: 58dvh;                  /* モバイル時のボトムシート高さ */
 }
 html, body {
   margin: 0; padding: 0; width: 100vw; height: 100dvh;
@@ -65,7 +69,12 @@ html, body {
 #card-container,
 .postcard-stage {
   width: 100vw; height: 100dvh; display: grid; place-items: center;
-  perspective: 1200px; overflow: hidden; background: var(--brand-gray); position: relative;
+  perspective: 1200px; overflow: hidden; position: relative;
+  background:
+    radial-gradient(120% 80% at 50% 0%, rgba(255,255,255,.85), rgba(255,255,255,0) 60%),
+    radial-gradient(90% 70% at 50% 110%, rgba(178,58,30,.06), rgba(178,58,30,0) 55%),
+    var(--brand-gray);
+  transition: width .35s cubic-bezier(.2,.8,.2,1), height .35s cubic-bezier(.2,.8,.2,1);
 }
 #card-container::before,
 .postcard-stage::before {
@@ -75,13 +84,29 @@ html, body {
     radial-gradient(40% 14% at 50% 75%, rgba(0,0,0,0.18), transparent 60%);
   transform: translateZ(0);
 }
-/* カード基本スタイル（モバイル350px・PC600px固定幅） */
+/* 編集パネルを開いている間もカードが見えるようステージを縮める */
+@media (min-width: 900px) {
+  html.editing-open #card-container,
+  html.editing-open .postcard-stage {
+    width: calc(100vw - var(--editor-dock-w));
+  }
+}
+@media (max-width: 899.98px) {
+  html.editing-open #card-container,
+  html.editing-open .postcard-stage {
+    height: calc(100dvh - var(--sheet-h));
+  }
+}
+/* カード基本スタイル（ビューポートに常に収まる可変幅。基準=モバイル350px・PC600px） */
 .new-year-card {
   position: relative; transform-style: preserve-3d;
-  transition: transform 0.6s cubic-bezier(.2,.8,.2,1); border: none;
+  transition: transform 0.6s cubic-bezier(.2,.8,.2,1),
+              width .35s cubic-bezier(.2,.8,.2,1), height .35s cubic-bezier(.2,.8,.2,1);
+  border: none;
   aspect-ratio: 100 / 148;
   --card-width-base: 350px;
-  --card-width: 350px;
+  /* 幅・高さ（下部ボタン領域ぶんを確保）のどちらにも収める */
+  --card-width: min(350px, calc(100vw - 40px), calc((100dvh - 176px) / 1.48));
   --card-scale: calc(var(--card-width) / var(--card-width-base));
   /* Scale greeting font with card width: 350px -> 14px, 600px -> 24px */
   --card-font-base: calc(14px * var(--card-scale));
@@ -119,7 +144,21 @@ html, body {
 
 @media (min-width: 900px) {
 .new-year-card {
-    --card-width: 600px;
+    --card-width: min(600px, calc(100vw - 64px), calc((100dvh - 176px) / 1.48));
+  }
+  /* 編集中は右ドックを除いた領域に収める */
+  html.editing-open .new-year-card {
+    --card-width: min(600px,
+                      calc(100vw - var(--editor-dock-w) - 64px),
+                      calc((100dvh - 176px) / 1.48));
+  }
+}
+@media (max-width: 899.98px) {
+  /* 編集中はボトムシートの上の領域に収める */
+  html.editing-open .new-year-card {
+    --card-width: min(350px,
+                      calc(100vw - 40px),
+                      calc((100dvh - var(--sheet-h) - 56px) / 1.48));
   }
 }
 
@@ -344,16 +383,29 @@ html.h2c-snapshot .side {
   bottom: clamp(16px, 4vw, 24px);
   border: 1px solid var(--brand-red);
   border-radius: 999px;
-  padding: 12px 24px;
-  background: #fff;
+  padding: 12px 22px;
+  background: rgba(255,255,255,.92);
+  backdrop-filter: blur(4px);
   color: var(--brand-red);
   font-weight: 700;
   font-size: 15px;
   letter-spacing: .08em;
-  display: inline-flex; align-items: center; gap: 10px;
+  display: inline-flex; align-items: center; gap: 8px;
   cursor: pointer; z-index: 65;
   box-shadow: 0 6px 16px rgba(0,0,0,0.08);
-  transition: transform .15s ease, box-shadow .15s ease, background .15s ease, color .15s ease;
+  transition: transform .15s ease, box-shadow .15s ease, background .15s ease,
+              color .15s ease, opacity .2s ease, visibility .2s;
+}
+.floating-cta svg{ width: 16px; height: 16px; flex: 0 0 auto; }
+.floating-cta--right{ transition: right .35s cubic-bezier(.2,.8,.2,1), transform .15s ease, box-shadow .15s ease, background .15s ease, color .15s ease; }
+/* 編集中: 「編集」ボタンは冗長なので隠す（印刷はPCドック時のみ残す） */
+html.editing-open #editor-open{ opacity: 0; visibility: hidden; pointer-events: none; }
+@media (min-width: 900px) {
+  /* 印刷ボタンはドックに隠れないよう左へ退避 */
+  html.editing-open #btn-print{ right: calc(var(--editor-dock-w) + clamp(16px, 2vw, 24px)); }
+}
+@media (max-width: 899.98px) {
+  html.editing-open .floating-cta{ opacity: 0; visibility: hidden; pointer-events: none; }
 }
 .floating-cta--left { left: clamp(16px, 4vw, 24px); }
 .floating-cta--right { right: clamp(16px, 4vw, 24px); }
@@ -383,49 +435,134 @@ html.h2c-snapshot .side {
   50% { box-shadow: var(--cta-glow-strong, 0 22px 44px rgba(239,68,68,.6)), var(--cta-glow-ring, 0 0 22px rgba(245,158,11,.55)); }
   100% { box-shadow: var(--cta-shadow, 0 18px 38px rgba(239,68,68,.45)), 0 0 0 rgba(0,0,0,0); }
 }
+/* ===== エディタ（カードを見ながら編集できるドック/シート型） ===== */
 #editor-overlay[aria-hidden="true"]{ display: none; }
-#editor-overlay{ position: fixed; inset: 0; background: rgba(0,0,0,.25); z-index: 80; display: grid; place-items: center; }
+#editor-overlay{
+  position: fixed; inset: 0; z-index: 80;
+  background: none; pointer-events: none; /* カード側は触れるまま */
+}
 .editor-panel{
-  width: min(980px, 96vw); max-height: min(94dvh, 900px);
-  background: #fff; border-radius: 12px; box-shadow: 0 18px 40px rgba(0,0,0,.16);
+  pointer-events: auto;
+  position: absolute;
+  background: #fff;
   display: flex; flex-direction: column; overflow: hidden;
+  box-shadow: 0 -18px 40px rgba(29, 29, 29, .18);
+}
+/* PC: 右側ドック */
+@media (min-width: 900px) {
+  .editor-panel{
+    top: 0; right: 0; bottom: 0;
+    width: var(--editor-dock-w);
+    border-left: 1px solid var(--border-soft);
+    box-shadow: -20px 0 48px rgba(29, 29, 29, .14);
+    animation: editor-slide-in .32s cubic-bezier(.2,.8,.2,1);
+  }
+}
+/* モバイル: ボトムシート */
+@media (max-width: 899.98px) {
+  .editor-panel{
+    left: 0; right: 0; bottom: 0;
+    height: var(--sheet-h);
+    border-radius: 18px 18px 0 0;
+    animation: editor-slide-up .32s cubic-bezier(.2,.8,.2,1);
+  }
+  .editor-panel::before{
+    content: ""; position: absolute; top: 7px; left: 50%;
+    width: 42px; height: 4px; border-radius: 999px;
+    transform: translateX(-50%);
+    background: #d5d7db;
+  }
+}
+@keyframes editor-slide-in { from { transform: translateX(24px); opacity: 0; } to { transform: none; opacity: 1; } }
+@keyframes editor-slide-up { from { transform: translateY(32px); opacity: 0; } to { transform: none; opacity: 1; } }
+@media (prefers-reduced-motion: reduce) {
+  .editor-panel{ animation: none !important; }
 }
 .editor-header{
-  display: flex; align-items: center; justify-content: space-between;
-  padding: 14px 18px; border-bottom: 1px solid var(--border-soft);
+  display: flex; align-items: center; justify-content: space-between; gap: 8px;
+  padding: 16px 18px 12px; border-bottom: 1px solid var(--border-soft);
   background: #fff;
 }
-.editor-body{ padding: 18px; overflow: auto; flex: 1 1 auto; background: #fafafa; }
-.grid2{ display: grid; grid-template-columns: 1fr 1fr; gap: 16px; min-width: 0; }
-@media (max-width: 860px){ .grid2{ grid-template-columns: 1fr; } }
-.group{
-  border: 1px solid var(--border-soft); border-radius: 12px; padding: 14px;
-  background: #fff; min-width: 0;
+.editor-header h2{
+  margin: 0; font-size: 16px; letter-spacing: .04em; color: var(--brand-dark);
 }
-.group-title{ margin: 0 0 10px; font-size: 14px; color: #111; font-weight: 700; }
+.editor-hint{
+  margin: 2px 0 0; font-size: 11px; color: var(--text-muted); letter-spacing: .02em;
+}
+#editor-close{
+  flex: 0 0 auto; width: 36px; height: 36px; padding: 0;
+  display: grid; place-items: center;
+  border: 1px solid var(--border-soft); border-radius: 999px;
+  background: #fff; color: #4b5563; font-size: 18px; line-height: 1;
+  transition: background .15s ease, color .15s ease, transform .15s ease;
+}
+#editor-close:hover{ background: var(--brand-dark); color: #fff; transform: rotate(90deg); }
+.editor-body{ padding: 16px; overflow: auto; overscroll-behavior: contain; flex: 1 1 auto; background: #f7f7f5; }
+.grid2{ display: grid; grid-template-columns: 1fr; gap: 14px; min-width: 0; }
+.group{
+  border: 1px solid var(--border-soft); border-radius: 14px; padding: 16px;
+  background: #fff; min-width: 0;
+  box-shadow: 0 1px 2px rgba(29,29,29,.04);
+}
+.group-title{
+  margin: 0 0 12px; font-size: 13px; color: #111; font-weight: 700;
+  letter-spacing: .06em; display: flex; align-items: center; gap: 8px;
+}
+.group-title::before{
+  content: ""; width: 4px; height: 14px; border-radius: 999px;
+  background: var(--brand-red); flex: 0 0 auto;
+}
 label.stack{ display: grid; gap: 8px; margin-bottom: 14px; min-width: 0; }
-label .label{ font-size: 13px; color: #1f2937; font-weight: 600; }
+label .label{
+  font-size: 13px; color: #1f2937; font-weight: 600;
+  display: flex; align-items: center; justify-content: space-between; gap: 8px;
+}
 .row{ display: flex; gap: 8px; align-items: stretch; min-width: 0; } .row.wrap{ flex-wrap: wrap; }
 .flex-1{ flex: 1 1 0; min-width: 0; }
 
-textarea, input[type="text"], select{
+textarea, input[type="text"], select, input[type="file"]{
   width: 100%; min-width: 0; box-sizing: border-box;
-  padding: 10px; border: 1px solid var(--border-soft); border-radius: 10px; font-size: 14px; background: #fff;
+  padding: 10px 12px; border: 1px solid var(--border-soft); border-radius: 10px;
+  font-size: 16px; /* iOSのフォーカスズームを防止 */
+  font-family: inherit; color: var(--brand-dark); background: #fff;
+  transition: border-color .15s ease, box-shadow .15s ease;
+}
+textarea:focus-visible, input:focus-visible, select:focus-visible{
+  outline: none; border-color: var(--brand-red); box-shadow: var(--focus-ring);
 }
 textarea{ resize: vertical; }
-select{ width: auto; }
+select{ width: auto; align-self: flex-start; }
+input[type="checkbox"], input[type="radio"], input[type="range"]{ accent-color: var(--brand-red); }
 .is-invalid{ border-color: #e11d48 !important; outline-color: #e11d48; }
-.valid-note,.hint{ font-size: 12px; color: var(--text-muted); }
+.valid-note,.hint{ font-size: 12px; color: var(--text-muted); line-height: 1.6; }
 
-.options{ border:1px solid var(--border-soft); padding:12px; border-radius:10px; margin-top:6px; background:#fff; }
-.options .inline{ display:flex; align-items:center; gap:8px; margin:6px 0; }
+.options{ border:1px solid var(--border-soft); padding:12px; border-radius:10px; margin:6px 0 0; background:#fff; }
+.options legend{ font-size: 12px; font-weight: 700; color: #1f2937; padding: 0 6px; }
+.options .inline{ display:flex; align-items:center; gap:8px; margin:6px 0; font-size: 14px; cursor: pointer; }
+.options .inline input{ width: 18px; height: 18px; margin: 0; flex: 0 0 auto; }
 
 .sample-wrap{ margin-bottom: 10px; }
 .sample-grid{ display: grid; grid-template-columns: repeat(5, minmax(0,1fr)); gap: 8px; }
-.sample{ border: 1px solid var(--border-soft); border-radius: 10px; padding: 0; background: #fff; cursor: pointer; overflow: hidden; }
-.sample img{ display: block; width: 100%; height: 72px; object-fit: cover; }
-.sample:focus{ outline: 2px solid #0ea5e9; }
-.sep{ border: none; border-top: 1px solid var(--border-soft); margin: 12px 0; }
+.sample{
+  position: relative;
+  border: 1px solid var(--border-soft); border-radius: 10px; padding: 0;
+  background: #fff; cursor: pointer; overflow: hidden;
+  transition: transform .15s ease, box-shadow .15s ease, border-color .15s ease;
+}
+.sample:hover{ transform: translateY(-2px); box-shadow: 0 6px 14px rgba(29,29,29,.12); }
+.sample img{ display: block; width: 100%; aspect-ratio: 100 / 148; height: auto; object-fit: cover; }
+.sample:focus-visible{ outline: none; border-color: var(--brand-red); box-shadow: var(--focus-ring); }
+.sample.is-selected{
+  border-color: var(--brand-red);
+  box-shadow: 0 0 0 2px var(--brand-red);
+}
+.sample.is-selected::after{
+  content: "✓"; position: absolute; right: 4px; top: 4px;
+  width: 18px; height: 18px; border-radius: 999px;
+  background: var(--brand-red); color: #fff;
+  font-size: 12px; font-weight: 700; line-height: 18px; text-align: center;
+}
+.sep{ border: none; border-top: 1px solid var(--border-soft); margin: 14px 0; }
 
 .uploader{ border: 1px dashed #cbd5e1; padding: 12px; border-radius: 12px; background: #fff; }
 .uploader-input{ position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
@@ -464,23 +601,58 @@ select{ width: auto; }
 .cropper-wrap img{ max-width: 100%; display: block; }
 .crop-controls{ display: flex; gap: 8px; padding: 8px 0; flex-wrap: wrap; }
 
-button.primary{
-  background: var(--brand-red); color:#fff; border:0; padding:10px 14px; border-radius:10px;
-}
 button{
   padding:10px 14px; border-radius:10px; border:1px solid var(--border-soft); background:#fff;
-  font-weight: 600; color: #111;
+  font-weight: 600; color: #111; font-family: inherit; font-size: 14px;
+  cursor: pointer;
+  transition: background .15s ease, color .15s ease, border-color .15s ease,
+              box-shadow .15s ease, transform .1s ease, opacity .15s ease;
+}
+button:hover{ border-color: #b9bec5; background: #f8f8f7; }
+button:active{ transform: translateY(1px); }
+button:focus-visible{ outline: none; border-color: var(--brand-red); box-shadow: var(--focus-ring); }
+button:disabled{ opacity: .45; cursor: not-allowed; transform: none; }
+button.primary{
+  background: var(--brand-red); color:#fff; border:1px solid var(--brand-red);
+}
+button.primary:hover{ background: #a80019; border-color: #a80019; }
+button.primary:disabled{ background: var(--brand-red); border-color: var(--brand-red); }
+button.ghost{
+  background: transparent; border-color: transparent; color: var(--brand-red);
+  text-decoration: underline; text-underline-offset: 3px;
+}
+button.ghost:hover{ background: var(--brand-red-soft); border-color: transparent; }
+button.small{ padding: 4px 10px; font-size: 12px; border-radius: 8px; }
+
+
+.editor-actions{
+  display: flex; gap: 8px; align-items: center; flex-wrap: wrap;
+  padding: 12px 16px calc(12px + env(safe-area-inset-bottom, 0px));
+  border-top: 1px solid var(--border-soft); background: #fff;
+}
+.editor-actions input{
+  flex: 1 1 120px; min-width: 0; padding: 10px 12px; font-size: 13px;
+  border:1px solid var(--border-soft); border-radius:10px; box-sizing: border-box;
+  color: var(--text-muted); background: #f8f8f7;
 }
 
-
-.editor-actions{ display: flex; gap: 8px; align-items: center; padding: 14px 18px; border-top: 1px solid var(--border-soft); background: #fff; }
-.editor-actions input{ flex: 1 1 auto; min-width: 40%; padding: 10px; border:1px solid var(--border-soft); border-radius:10px; box-sizing: border-box; }
-
-
-#toast{ position: fixed; left: 50%; transform: translateX(-50%); bottom: 18px; background: rgba(0,0,0,.8); color: #fff; padding: 10px 14px; border-radius: 10px; z-index: 100; display: none; }
-#busy{ position: fixed; inset: 0; display: none; place-items: center; background: rgba(255,255,255,.45); z-index: 90; }
+#toast{
+  position: fixed; left: 50%; bottom: calc(18px + env(safe-area-inset-bottom, 0px));
+  max-width: min(88vw, 480px); box-sizing: border-box;
+  background: rgba(29,29,29,.92); color: #fff; padding: 10px 18px;
+  border-radius: 999px; z-index: 100; font-size: 13px; letter-spacing: .02em;
+  box-shadow: 0 8px 24px rgba(0,0,0,.25);
+  opacity: 0; visibility: hidden; transform: translate(-50%, 10px);
+  transition: opacity .22s ease, transform .22s ease, visibility .22s;
+}
+#toast.is-show{ opacity: 1; visibility: visible; transform: translate(-50%, 0); }
+@media (max-width: 899.98px) {
+  /* 編集シートの操作列と重ならないよう、シートの上に表示 */
+  html.editing-open #toast{ bottom: calc(var(--sheet-h) + 14px); }
+}
+#busy{ position: fixed; inset: 0; display: none; place-items: center; background: rgba(255,255,255,.55); backdrop-filter: blur(2px); z-index: 90; }
 #busy[aria-hidden="false"]{ display: grid; }
-.spinner{ width: 38px; height: 38px; border-radius: 999px; border: 4px solid rgba(0,0,0,.2); border-top-color: #0ea5e9; animation: sp 1s linear infinite; margin: auto; }
+.spinner{ width: 38px; height: 38px; border-radius: 999px; border: 4px solid rgba(199,0,30,.15); border-top-color: var(--brand-red); animation: sp 1s linear infinite; margin: auto; }
 .busy-text{ margin-top: 8px; text-align: center; font-weight: 600; color: #333; }
 @keyframes sp { to { transform: rotate(360deg); } }
 
@@ -494,7 +666,26 @@ html.editing-open #gyro-btn{ opacity: 0; pointer-events: none; }
 #editor-overlay, .editor-panel, .editor-body{ -webkit-overflow-scrolling: touch; touch-action: auto; }
 
 
-#btn-copy{ padding-inline: 18px; min-width: 160px; white-space: nowrap; letter-spacing: .02em; }
+#btn-copy{ padding-inline: 18px; white-space: nowrap; letter-spacing: .02em; flex: 0 0 auto; }
+#btn-share{ white-space: nowrap; flex: 0 0 auto; display: none; }
+#btn-share.is-available{ display: inline-flex; align-items: center; gap: 6px; }
+#btn-share svg{ width: 15px; height: 15px; }
+
+/* 位置調整パネル（position-controls.js が挿入） */
+#panel-position-controls .row{ align-items: center; }
+#panel-position-controls output{
+  min-width: 5ch; text-align: right; font-size: 13px; font-weight: 600;
+  font-variant-numeric: tabular-nums; color: var(--brand-dark);
+}
+#panel-position-controls input[type="range"]{
+  flex: 1; padding: 0; border: none; box-shadow: none; background: transparent;
+}
+
+/* カード（role=button）のキーボードフォーカス表示 */
+.new-year-card:focus-visible{
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(199,0,30,.35), 0 0 0 8px rgba(199,0,30,.12);
+}
 
 
 .greeting-side .new-year-image,
@@ -504,9 +695,6 @@ html.editing-open #gyro-btn{ opacity: 0; pointer-events: none; }
 
 .print-only { display: none; }
 .screen-only { display: block; }
-.print-hint {
-  margin: 8px auto 0; text-align: center; font-size: 12px; color: #475569; letter-spacing: .02em;
-}
 :root {
   --print-scale: 0.55; 
 }
@@ -653,8 +841,8 @@ html.is-printing, html.is-printing body { width: auto; height: auto; background:
     height: 888px;
   }
 }
-
-
+
+
 
 
 
