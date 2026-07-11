@@ -298,19 +298,14 @@ export function makePhases() {
       // 振り向きに見えるヨー回転はせず、疾走の煽り揺れのみ
       W.hagakiPivot.rotation.z = Math.sin(t * 7) * .12;
       W.hagakiPivot.rotation.x = Math.sin(t * 9 + .5) * .08;
-      if (z < 2.4) {
-        setCam(
-          SSR_X + 1.1 + Math.sin(t * 31) * .03, .65 + Math.sin(t * 41) * .02, z + 2.6,
-          SSR_X - .15, 1.05, z - .5, 48
-        );
-        state.radial = .04;
-        state.bloom = .4;
-      } else {
-        setCam(SSR_X + .55, 1.4, z + 2.9, SSR_X, 1.25, z - .2, 44);
-        state.radial = .035;
-        state.after = .5;
-        state.bloom = .38;
-      }
+      // 出走直後のローアングル追走ワンカットで最後まで通す
+      // （似たアングルの切り替えを挟むと同じカットが2回に見えるため）
+      setCam(
+        SSR_X + 1.1 + Math.sin(t * 31) * .03, .65 + Math.sin(t * 41) * .02, z + 2.6,
+        SSR_X - .15, 1.05, z - .5, 48
+      );
+      state.radial = .04;
+      state.bloom = .4;
     };
     await tk.tw(W.hagaki.position, { z: 13, duration: 1.9, ease: 'power2.in' });
     if (tk.cancelled) return;
