@@ -3,6 +3,7 @@
 // 排出結果（SSR確定）として年賀状の裏面を届けるジョーク演出。
 // 演出エンジンは 年賀状2027/gacha-demo を移植（js/gacha/ 以下）。
 import { parseHash, decodeData } from '../utils.js';
+import { trackCard } from '../card-analytics.js';
 
 let started = false;      // このロードで一度でも再生したか
 let engine = null;        // 遅延初期化されるエンジン一式
@@ -185,6 +186,7 @@ async function initEngine(cardData) {
   // ---- HUD ----
   overlay.querySelector('#gc-skip').addEventListener('click', (e) => {
     e.stopPropagation();
+    trackCard('gacha_skip', { phase: state.phase });
     uiMod.SFX.whoosh(.25);
     jumpTo('reveal');
   });
@@ -208,6 +210,8 @@ async function initEngine(cardData) {
     },
     step(n = 1, dt = 1 / 60) { for (let i = 0; i < n; i++) frame(dt); return `t=${simT.toFixed(2)} phase=${state.phase}`; },
     async play() {
+      const t0 = performance.now();
+      trackCard('gacha_start');
       overlay.classList.add('show');
       startLoop();
       uiMod.SFX.init();
@@ -223,6 +227,7 @@ async function initEngine(cardData) {
       await Promise.race([texSwap, new Promise((r) => setTimeout(r, 900))]);
       runFrom(DEBUG_PHASE ? Math.max(0, PHASES.findIndex((p) => p.name === DEBUG_PHASE)) : 0);
       await done;
+      trackCard('gacha_complete', { duration_sec: Math.round((performance.now() - t0) / 1000) });
       uiMod.SFX.bgmStop();
       await new Promise((res) => {
         overlay.style.transition = 'opacity .45s ease';
