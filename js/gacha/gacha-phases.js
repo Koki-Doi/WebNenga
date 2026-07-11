@@ -313,33 +313,7 @@ export function makePhases() {
     await UI.flash(.14, .6);
   });
 
-  // ---- 11. 黒シルエットのティザー（パステル + バックハロ） ----
-  P('teaser', async (tk) => {
-    resetFx();
-    setEnv('reveal');
-    showHagaki(true);
-    W.hagaki.position.set(0, 1.25, 0);
-    W.hagaki.rotation.set(0, 0, 0);
-    setHagakiSilhouette(true, .008);
-    W.amb.intensity = .4; W.key.intensity = .25;
-    state.bloom = .38;
-    W.revealSpark.set(true);
-    W.teaserGlow.material.opacity = .3;
-    W.teaserGlow.scale.setScalar(2.7);
-    setCam(0, 1.3, 3.1, 0, 1.25, 0, 40);
-    SFX.swell(1.0);
-    state.frame = (dt, t) => {
-      W.hagakiPivot.rotation.y = t * 2.4;
-      W.hagakiPivot.rotation.z = Math.sin(t * 1.8) * .08;
-    };
-    // 上昇しすぎると上端が見切れる（frame上端 ≈ y2.38）
-    tk.tw(W.hagaki.position, { y: 1.48, duration: .7, ease: 'sine.out' });
-    await tk.wait(.85);
-    if (tk.cancelled) return;
-    await UI.flash(.12, .5);
-  });
-
-  // ---- 12. セリフ（パステル画面） ----
+  // ---- 11. セリフ（パステル画面） ----
   P('speech', async (tk) => {
     resetFx();
     setEnv('none');
