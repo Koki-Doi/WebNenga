@@ -54,7 +54,6 @@ function buildOverlay() {
           <button id="gc-mute" title="サウンド">🔊</button>
           <button id="gc-skip">SKIP ▶▶</button>
         </div>
-        <div id="gc-credit">ウマ娘ガチャ演出のパロディです（ファンメイド）</div>
       </div>
     </div>`;
   document.body.appendChild(root);

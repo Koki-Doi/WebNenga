@@ -24,7 +24,7 @@
 - 無効化: URLに `?nogacha` を付ける（例: `…/?nogacha#id=…`）
 - デバッグ: `?gphase=フェーズ名` で任意フェーズから自動再生（fan / dash / doorOpen / crowd / sky / whiteflash / gateWide / gatePass / lamp / goldGate / run / speech / reveal）
 - 実装: `js/gacha/`（three.js + gsap を CDN の import map で解決、ビルド不要）と `gacha.css`。エンジンは共有リンク閲覧時のみアイドル時間に遅延ロード
-- 本演出はウマ娘のガチャ演出のファンメイド・パロディです（Cygames とは無関係）
+- 本演出はウマ娘のガチャ演出のファンメイド・パロディです（Cygames とは無関係。画面内への注釈表示はなし）
 
 ## ファイル構成
 - `index.html` : 画面本体とエディタUI
