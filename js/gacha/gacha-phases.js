@@ -46,15 +46,16 @@ export function makePhases() {
     resetFx();
     setEnv('corridor');
     showHagaki(true);
-    W.hagaki.position.set(0, 1.5, 1.2);
+    // 視線(ly)とほぼ同じ高さに置き、フレーム下端で切れないようにする
+    W.hagaki.position.set(0, 1.62, 1.2);
     W.hagaki.rotation.set(0, 0, 0);
     SFX.whoosh(1.2);
     SFX.sparkle(.4, 1100);
     state.frame = (dt, t) => { flutter(t, 1); };
-    setCam(.55, 1.75, 4.2, 0, 1.8, -7, 48);
+    setCam(.55, 1.9, 4.4, 0, 1.66, -7, 48);
     await Promise.all([
       tk.tw(W.hagaki.position, { z: -5.4, duration: 2.0, ease: 'power1.in' }),
-      tk.tw(cs(), { px: .3, pz: 1.4, py: 1.85, duration: 2.0, ease: 'power1.inOut' }),
+      tk.tw(cs(), { px: .3, pz: 1.6, py: 1.95, duration: 2.0, ease: 'power1.inOut' }),
     ]);
   });
 
@@ -63,8 +64,8 @@ export function makePhases() {
     resetFx();
     setEnv('corridor');
     showHagaki(true);
-    W.hagaki.position.set(0, 1.55, -5.4);
-    setCam(0, 1.6, -2.6, 0, 2.5, -7, 50);
+    W.hagaki.position.set(0, 1.75, -5.4);
+    setCam(0, 1.6, -2.6, 0, 2.35, -7, 50);
     state.frame = (dt, t) => { flutter(t, .55); };
     // 馬蹄リングが発光（予兆）
     SFX.swell(1.4);
@@ -249,7 +250,7 @@ export function makePhases() {
     W.key.intensity = 0;
     W.amb.intensity = .035;
     state.bloom = .38;
-    setCam(SSR_X, 1.05, -.2, SSR_X, 1.25, -4.5, 42);
+    setCam(SSR_X, 1.1, -.1, SSR_X, 1.3, -4.5, 44);
     SFX.swell(1.6);
     const go = W.gateObjs.find((o) => o.isSSR);
     state.frame = (dt, t) => {
@@ -260,8 +261,10 @@ export function makePhases() {
       W.hagakiPivot.rotation.y = t * 1.6;
       W.hagakiPivot.rotation.z = Math.sin(t * 2.2) * .06;
     };
+    // 縦画面は水平画角が狭い（垂直spanの9/16）ため、幅1.0のハガキが
+    // 収まる距離+広めのfovで止める（近づきすぎると左右が見切れる）
     await Promise.all([
-      tk.tw(cs(), { pz: -1.4, fov: 38, duration: 1.4, ease: 'power2.inOut' }),
+      tk.tw(cs(), { pz: -1.0, fov: 42, duration: 1.4, ease: 'power2.inOut' }),
       tk.tw(state, { bloom: .5, duration: 1.4 }),
     ]);
   });
@@ -332,7 +335,8 @@ export function makePhases() {
       W.hagakiPivot.rotation.y = t * 2.4;
       W.hagakiPivot.rotation.z = Math.sin(t * 1.8) * .08;
     };
-    tk.tw(W.hagaki.position, { y: 1.6, duration: .7, ease: 'sine.out' });
+    // 上昇しすぎると上端が見切れる（frame上端 ≈ y2.38）
+    tk.tw(W.hagaki.position, { y: 1.48, duration: .7, ease: 'sine.out' });
     await tk.wait(.85);
     if (tk.cancelled) return;
     await UI.flash(.12, .5);
@@ -371,15 +375,17 @@ export function makePhases() {
     W.revealSpark.set(true);
     W.revealSun.material.opacity = .42;
     W.revealSunCross.material.opacity = .26;
-    setCam(0, 1.35, 2.5, 0, 1.32, 0, 36);
+    // ハガキ全体（高さ1.48）が名前帯の上に収まる距離で止める。
+    // 視線をやや下(1.2)に置いてカードを画面上寄りに配置
+    setCam(0, 1.3, 3.15, 0, 1.2, 0, 38);
     SFX.fanfare();
     UI.showRevealLabels(tk);
     state.frame = (dt, t) => {
-      W.hagaki.position.y = 1.32 + Math.sin(t * 1.4) * .03;
+      W.hagaki.position.y = 1.32 + Math.sin(t * 1.4) * .02;
       W.hagakiPivot.rotation.z = Math.sin(t * .9) * .02;
-      W.hagakiPivot.rotation.y = Math.sin(t * 1.1) * .06;
+      W.hagakiPivot.rotation.y = Math.sin(t * 1.1) * .05;
     };
-    tk.tw(cs(), { pz: 2.1, duration: 3.0, ease: 'power1.out' });
+    tk.tw(cs(), { pz: 2.8, duration: 3.0, ease: 'power1.out' });
     // タップで実物の年賀状へ（長めの保険タイムアウト付き）
     await Promise.race([tk.tap(), tk.wait(30)]);
     if (tk.cancelled) return;
