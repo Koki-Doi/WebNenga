@@ -1,0 +1,219 @@
+/* 年賀状ガチャ演出（ウマ娘パロディ）オーバーレイ
+   すべて #gacha-overlay 配下に隔離。寸法単位は --gsu（ステージ高の1/100） */
+#gacha-overlay {
+  position: fixed; inset: 0;
+  z-index: 2000;
+  display: none;
+  align-items: center; justify-content: center;
+  background: #000;
+  font-family: "M PLUS Rounded 1c", "Noto Sans JP", "Hiragino Maru Gothic ProN", sans-serif;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: none;
+}
+#gacha-overlay.show { display: flex; }
+
+#gc-stage {
+  position: relative;
+  width: var(--gsw, 360px); height: var(--gsh, 640px);
+  background: #000;
+  overflow: hidden;
+}
+#gc-three { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+#gc-ui { position: absolute; inset: 0; pointer-events: none; }
+#gc-ui .gc-ov { position: absolute; inset: 0; opacity: 0; visibility: hidden; }
+#gc-ui .gc-ov.show { opacity: 1; visibility: visible; }
+
+/* ============ 扇子カットイン ============ */
+#gc-fan { overflow: hidden; }
+#gc-fan .gc-fan-rig {
+  position: absolute; left: 50%; top: 50%;
+  width: calc(var(--gsu) * 74);
+  transform-origin: 50% 82%;
+  filter: drop-shadow(0 calc(var(--gsu) * 0.9) calc(var(--gsu) * 2.2) rgba(40, 15, 5, .45));
+}
+#gc-fan .gc-fan-rig svg { width: 100%; display: block; overflow: visible; }
+#gc-fan .gc-gk-pos {
+  position: absolute; left: 50%; top: 34%;
+  transform: translate(-50%, -50%) rotate(-12deg);
+}
+#gc-fan .gc-gekiatsu {
+  font-family: "Yuji Boku", serif;
+  font-size: calc(var(--gsu) * 12.5);
+  color: #16120c;
+  white-space: nowrap;
+  letter-spacing: -0.06em;
+  text-shadow: calc(var(--gsu) * 0.28) calc(var(--gsu) * 0.28) 0 rgba(180, 40, 30, .22);
+}
+#gc-fan .gc-gekiatsu .small { font-size: .58em; }
+
+/* ============ セリフ画面 ============ */
+#gc-speech {
+  background:
+    radial-gradient(ellipse at 18% 6%, rgba(250, 255, 180, .75) 0%, transparent 50%),
+    radial-gradient(ellipse at 85% 94%, rgba(255, 170, 220, .65) 0%, transparent 55%),
+    linear-gradient(165deg, #d8f0a0 0%, #b4ecc4 20%, #96e4de 42%, #9cc8f0 62%, #c2aeec 80%, #f2aada 100%);
+  display: flex; align-items: center; justify-content: center;
+}
+#gc-speech-stars { position: absolute; inset: 0; overflow: hidden; }
+#gc-speech-stars i {
+  position: absolute; font-style: normal;
+  animation: gcStarFloat 3.4s ease-in-out infinite;
+  opacity: .85;
+}
+#gc-speech-stars i.hs {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='none' stroke='rgba(255,255,255,.8)' stroke-width='3.4' stroke-linecap='round' d='M5.2 21 C3.7 15.8 4.1 9 8 5.4 C10.4 3.3 13.6 3.3 16 5.4 C19.9 9 20.3 15.8 18.8 21'/%3E%3C/svg%3E");
+  background-size: contain; background-repeat: no-repeat;
+  filter: drop-shadow(0 0 calc(var(--gsu) * 0.7) rgba(255, 255, 255, .65));
+}
+@keyframes gcStarFloat {
+  0%, 100% { transform: translateY(0) rotate(-8deg) scale(1); }
+  50% { transform: translateY(calc(var(--gsu) * -2.4)) rotate(8deg) scale(1.12); }
+}
+#gc-speech-box { width: 84%; text-align: center; }
+#gc-speech-text {
+  font-weight: 900;
+  font-size: calc(var(--gsu) * 3.1);
+  line-height: 1.9;
+  color: #ffffff;
+  -webkit-text-stroke: calc(var(--gsu) * 0.7) #ff8ec6;
+  paint-order: stroke fill;
+  text-shadow:
+    0 calc(var(--gsu) * -0.5) calc(var(--gsu) * 1.6) rgba(150, 240, 190, .75),
+    0 0 calc(var(--gsu) * 1.7) rgba(255, 150, 210, .85),
+    0 calc(var(--gsu) * 0.4) calc(var(--gsu) * 1.6) rgba(190, 110, 200, .45);
+  white-space: pre-wrap;
+}
+.gc-tap-hint {
+  position: absolute; bottom: 4.5%; left: 0; right: 0;
+  text-align: center; color: rgba(255, 255, 255, .92);
+  font-weight: 800; font-size: calc(var(--gsu) * 1.9);
+  text-shadow: 0 1px 4px rgba(120, 80, 140, .6);
+  animation: gcTapBlink 1.1s ease-in-out infinite;
+}
+@keyframes gcTapBlink { 0%, 100% { opacity: .25; } 50% { opacity: 1; } }
+
+/* ============ SSR確定 UI ============ */
+#gc-reveal-ui { overflow: hidden; }
+.gc-rv-new {
+  position: absolute; top: 12%; left: 8%;
+  background: linear-gradient(160deg, #ffe071, #ffb627);
+  color: #fff; font-weight: 900; font-style: italic;
+  font-size: calc(var(--gsu) * 3);
+  padding: calc(var(--gsu) * 0.7) calc(var(--gsu) * 2);
+  border-radius: calc(var(--gsu) * 4);
+  transform: rotate(-12deg) scale(0);
+  box-shadow: 0 0 calc(var(--gsu) * 2.4) rgba(255, 200, 60, .9);
+  text-shadow: 0 2px 0 rgba(200, 120, 0, .5);
+}
+.gc-rv-bottom { position: absolute; left: 0; right: 0; bottom: 5.5%; text-align: center; }
+.gc-rv-items {
+  display: flex; align-items: center; justify-content: flex-end;
+  gap: calc(var(--gsu) * 1.0);
+  padding-right: 8%;
+  margin-bottom: calc(var(--gsu) * 0.8);
+}
+.gc-rv-items b {
+  color: #fff; font-weight: 900; font-style: italic;
+  font-size: calc(var(--gsu) * 2.5);
+  -webkit-text-stroke: calc(var(--gsu) * 0.34) #a07818;
+  paint-order: stroke fill;
+  text-shadow: 0 calc(var(--gsu) * 0.2) calc(var(--gsu) * 0.6) rgba(120, 70, 0, .5);
+}
+.gc-qi-shoe {
+  display: inline-block;
+  width: calc(var(--gsu) * 3.1); height: calc(var(--gsu) * 3.1);
+  background-size: contain; background-repeat: no-repeat; background-position: center;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='none' stroke='%23f3c14e' stroke-width='4.6' stroke-linecap='round' d='M5.2 21 C3.7 15.8 4.1 9 8 5.4 C10.4 3.3 13.6 3.3 16 5.4 C19.9 9 20.3 15.8 18.8 21'/%3E%3Cpath fill='none' stroke='%23a8741a' stroke-width='1' d='M5.2 21 C3.7 15.8 4.1 9 8 5.4 C10.4 3.3 13.6 3.3 16 5.4 C19.9 9 20.3 15.8 18.8 21'/%3E%3Cg fill='%237a4a08'%3E%3Ccircle cx='5.5' cy='17.8' r='.95'/%3E%3Ccircle cx='5.7' cy='12.8' r='.95'/%3E%3Ccircle cx='7.2' cy='8.4' r='.95'/%3E%3Ccircle cx='10.2' cy='5.5' r='.95'/%3E%3Ccircle cx='13.8' cy='5.5' r='.95'/%3E%3Ccircle cx='16.8' cy='8.4' r='.95'/%3E%3Ccircle cx='18.3' cy='12.8' r='.95'/%3E%3Ccircle cx='18.5' cy='17.8' r='.95'/%3E%3C/g%3E%3C/svg%3E");
+  filter: drop-shadow(0 calc(var(--gsu) * 0.2) calc(var(--gsu) * 0.5) rgba(60, 40, 10, .45));
+}
+.gc-omake {
+  background: linear-gradient(#ff8a9e, #e84a6a);
+  color: #fff; font-weight: 900;
+  font-size: calc(var(--gsu) * 1.45);
+  padding: calc(var(--gsu) * 0.25) calc(var(--gsu) * 0.8);
+  border-radius: calc(var(--gsu) * 0.7);
+  box-shadow: 0 1px 3px rgba(150, 30, 60, .5), inset 0 1px 1px rgba(255, 255, 255, .55);
+  transform: rotate(-6deg);
+  white-space: nowrap; flex-shrink: 0;
+}
+.gc-rv-band {
+  position: relative;
+  padding: calc(var(--gsu) * 1.0) 0 calc(var(--gsu) * 1.2);
+  background: linear-gradient(100deg,
+      transparent 0%, rgba(255, 200, 160, .45) 3%,
+      #ffd8a0 12%, #ffe8c0 32%, #f7b0d4 68%, #ff8ec4 88%,
+      rgba(255, 160, 200, .45) 97%, transparent 100%);
+  clip-path: polygon(0% 26%, 2.2% 0%, 98.2% 5%, 100% 30%, 98.8% 100%, 1.2% 95%);
+  transform: rotate(-1.6deg);
+  box-shadow: 0 calc(var(--gsu) * 0.5) calc(var(--gsu) * 2.2) rgba(160, 90, 120, .35);
+}
+.gc-rv-band::before {
+  content: '';
+  position: absolute; inset: calc(var(--gsu) * -0.55) 6%;
+  background: linear-gradient(100deg, transparent, rgba(255, 240, 210, .6) 30%, rgba(255, 255, 255, .85) 50%, rgba(255, 210, 235, .6) 70%, transparent);
+  filter: blur(calc(var(--gsu) * 0.6));
+  z-index: -1;
+}
+.gc-rv-epithet {
+  color: #fff; font-weight: 800;
+  font-size: calc(var(--gsu) * 2.0);
+  -webkit-text-stroke: calc(var(--gsu) * 0.4) #c05a2a;
+  paint-order: stroke fill;
+  text-shadow: 0 calc(var(--gsu) * 0.2) calc(var(--gsu) * 0.7) rgba(150, 70, 30, .55);
+}
+.gc-rv-name {
+  font-weight: 900;
+  font-size: calc(var(--gsu) * 5.0);
+  line-height: 1.15;
+  color: #fff;
+  -webkit-text-stroke: calc(var(--gsu) * 0.55) #b8452a;
+  paint-order: stroke fill;
+  text-shadow: 0 calc(var(--gsu) * 0.5) calc(var(--gsu) * 1.4) rgba(140, 50, 30, .5);
+}
+.gc-rv-stars {
+  margin-top: calc(var(--gsu) * 0.7);
+  padding-left: 10%;
+  text-align: left;
+  font-size: calc(var(--gsu) * 6.2);
+  height: calc(var(--gsu) * 7);
+}
+.gc-rv-stars span {
+  display: inline-block; margin: 0 calc(var(--gsu) * -0.45);
+  color: #ffd83d;
+  -webkit-text-stroke: calc(var(--gsu) * 0.3) #fff;
+  text-shadow: 0 0 calc(var(--gsu) * 1.8) rgba(255, 190, 40, .95), 0 calc(var(--gsu) * 0.35) 0 #c8860a;
+  transform: scale(0) rotate(-8deg);
+}
+
+/* ============ フラッシュ / HUD ============ */
+#gc-flash { background: #fff; }
+#gc-flash.rainbow {
+  background:
+    radial-gradient(circle at 50% 50%, #fff 0%, rgba(255, 255, 255, .25) 34%, transparent 60%),
+    conic-gradient(from 20deg, #ff8a8a, #ffd76e, #9aff8b, #7ad9ff, #b48bff, #ff8bd6, #ff8a8a);
+}
+#gc-hud {
+  position: absolute; top: calc(var(--gsu) * 1.6); right: calc(var(--gsu) * 1.6);
+  display: flex; gap: calc(var(--gsu) * 1);
+  pointer-events: auto; z-index: 50;
+}
+#gc-hud button {
+  border: none; cursor: pointer;
+  background: rgba(0, 0, 0, .38);
+  color: #fff; font-family: inherit; font-weight: 800;
+  font-size: calc(var(--gsu) * 1.7);
+  padding: calc(var(--gsu) * 0.7) calc(var(--gsu) * 1.5);
+  border-radius: calc(var(--gsu) * 3);
+  backdrop-filter: blur(4px);
+  box-shadow: inset 0 0 0 1.5px rgba(255, 255, 255, .45);
+}
+/* パロディ表記（常時・控えめに） */
+#gc-credit {
+  position: absolute; left: calc(var(--gsu) * 1.4); bottom: calc(var(--gsu) * 1.1);
+  color: rgba(255, 255, 255, .72);
+  font-weight: 700;
+  font-size: calc(var(--gsu) * 1.25);
+  text-shadow: 0 1px 3px rgba(0, 0, 0, .55);
+  pointer-events: none;
+}

@@ -28,9 +28,20 @@
   <meta name="theme-color" content="#f2efe9" />
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%8E%8D%3C/text%3E%3C/svg%3E" />
   <link rel="stylesheet" href="nenga.css" />
+  <link rel="stylesheet" href="gacha.css" />
   <link rel="stylesheet" href="https://unpkg.com/cropperjs@1.6.2/dist/cropper.min.css">
-  <!-- 改行位置の差異を抑えるため同一フォントを読み込み -->
-  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&display=swap" rel="stylesheet">
+  <!-- 改行位置の差異を抑えるため同一フォントを読み込み（丸ゴ/筆文字はガチャ演出用） -->
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&family=M+PLUS+Rounded+1c:wght@700;800;900&family=Yuji+Boku&display=swap" rel="stylesheet">
+  <!-- ガチャ演出（ウマ娘パロディ）用: three.js / gsap を CDN から解決 -->
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js",
+      "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/",
+      "gsap": "https://cdn.jsdelivr.net/npm/gsap@3.12.5/index.js"
+    }
+  }
+  </script>
   
   <!-- Google tag (gtag.js) -->
   <script async src="https://www.googletagmanager.com/gtag/js?id=G-8ZP24N3HRZ"></script>
@@ -269,6 +280,8 @@
   <script type="module" src="./js/position-controls.js"></script>
   <!-- 軽量オートフィット（本文変更時のみ計測／リサイズは比例適用） -->
   <script type="module" src="./js/message-autofit-lite.js"></script>
+  <!-- 年賀状ガチャ（ウマ娘パロディ）: 初回の裏面タップを横取りして演出を挟む -->
+  <script type="module" src="./js/gacha/gacha-boot.js"></script>
   
   <script>
   // イベント送信ヘルパ
