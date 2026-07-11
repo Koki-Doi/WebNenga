@@ -218,6 +218,10 @@ async function initEngine(cardData) {
       const done = new Promise((res) => { doneResolver = res; });
       // 引いた瞬間の虹色バースト → フェーズ開始
       uiMod.UI.flash(.14, .6, .05, true);
+      // 実カードDOMをそのままテクスチャ化（オーバーレイが覆っている間に撮る）。
+      // バースト中に間に合わなければ手描きのまま開始し、完了次第差し替わる
+      const texSwap = world.refreshHagakiTextures().catch((e) => console.warn('[gacha] face capture failed', e));
+      await Promise.race([texSwap, new Promise((r) => setTimeout(r, 900))]);
       runFrom(DEBUG_PHASE ? Math.max(0, PHASES.findIndex((p) => p.name === DEBUG_PHASE)) : 0);
       await done;
       uiMod.SFX.bgmStop();

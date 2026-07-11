@@ -18,12 +18,13 @@ function setCam(px, py, pz, lx, ly, lz, fov = 50, roll = 0) {
   Object.assign(cs(), { px, py, pz, lx, ly, lz, fov, roll });
 }
 // ハガキのはためき（frame フック内で毎フレーム呼ぶ）
+// ※ ヨー回転は「振り向き」に見えるため入れない。紙らしい微揺れのみ
 function flutter(t, k = 1) {
   const p = W.hagakiPivot;
   if (!p) return;
   p.rotation.z = Math.sin(t * 3.8) * .09 * k;
   p.rotation.x = Math.sin(t * 3.1 + .7) * .07 * k;
-  p.rotation.y = Math.sin(t * 2.2) * .3 * k;
+  p.rotation.y = Math.sin(t * 2.2) * .04 * k;
   p.position.y = Math.sin(t * 4.6) * .04 * k;
 }
 
@@ -243,7 +244,8 @@ export function makePhases() {
     setEnv('race');
     showHagaki(true);
     W.standG.visible = false;
-    W.hagaki.position.set(SSR_X, 1.35, -3.85);
+    // ゲート房の内側（格子扉 z-4.5 の奥）に立たせる。出走前なので回転はさせない
+    W.hagaki.position.set(SSR_X, 1.3, -5.0);
     W.hagaki.rotation.set(0, 0, 0);
     // 色は linear 空間: 0.05 でも sRGB では 26% グレーに見えるため大きく絞る
     setHagakiSilhouette(true, .008);
@@ -257,9 +259,8 @@ export function makePhases() {
       const p = .36 + Math.sin(t * 5.2) * .12;
       if (go.glow) { go.glow.material.opacity = p; go.glow.scale.setScalar(3.4 + Math.sin(t * 5.2) * .4); }
       if (W.ssrSheen) W.ssrSheen.material.opacity = .1 + Math.sin(t * 3.4) * .06;
-      // ゆっくり回るハガキの影
-      W.hagakiPivot.rotation.y = t * 1.6;
-      W.hagakiPivot.rotation.z = Math.sin(t * 2.2) * .06;
+      // 静かに佇む影（呼吸程度の傾きのみ）
+      W.hagakiPivot.rotation.z = Math.sin(t * 2.2) * .03;
     };
     // 縦画面は水平画角が狭い（垂直spanの9/16）ため、幅1.0のハガキが
     // 収まる距離+広めのfovで止める（近づきすぎると左右が見切れる）
@@ -275,7 +276,8 @@ export function makePhases() {
     setEnv('race');
     showHagaki(true);
     W.standG.visible = false;
-    W.hagaki.position.set(SSR_X, 1.2, -3.85);
+    // ゲート房の内側から発走する（扉が開くのと同時に飛び出す）
+    W.hagaki.position.set(SSR_X, 1.25, -5.0);
     const go = W.gateObjs.find((o) => o.isSSR);
     SFX.clang();
     SFX.thud(.05);
@@ -293,9 +295,9 @@ export function makePhases() {
     SFX.whoosh(1.2, .2);
     state.frame = (dt, t) => {
       const z = W.hagaki.position.z;
-      // 疾走スピン
-      W.hagakiPivot.rotation.y += dt * 7;
+      // 振り向きに見えるヨー回転はせず、疾走の煽り揺れのみ
       W.hagakiPivot.rotation.z = Math.sin(t * 7) * .12;
+      W.hagakiPivot.rotation.x = Math.sin(t * 9 + .5) * .08;
       if (z < 2.4) {
         setCam(
           SSR_X + 1.1 + Math.sin(t * 31) * .03, .65 + Math.sin(t * 41) * .02, z + 2.6,

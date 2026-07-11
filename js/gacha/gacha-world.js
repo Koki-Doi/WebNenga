@@ -648,14 +648,14 @@ function buildCorridor() {
   };
   W.doorL = mkPanel(-1);
   W.doorR = mkPanel(1);
-  // アーチ上部
-  const arch = new THREE.Mesh(new THREE.PlaneGeometry(4.2, 1.5), M.lamb({ map: TEX.doorArch, transparent: true }));
-  arch.position.set(0, 5.1, .02);
+  // アーチ上部（天井高5.52を超えないよう収める）
+  const arch = new THREE.Mesh(new THREE.PlaneGeometry(4.2, 1.15), M.lamb({ map: TEX.doorArch, transparent: true }));
+  arch.position.set(0, 4.9, .02);
   door.add(arch);
-  // 枠
+  // 枠（柱も天井内に収める）
   const frameMat = M.lamb({ color: 0xd8a93f, emissive: 0x402a08 });
-  door.add(box(.26, 5.6, .34, frameMat, -2.08, 2.8, 0));
-  door.add(box(.26, 5.6, .34, frameMat, 2.08, 2.8, 0));
+  door.add(box(.26, 5.35, .34, frameMat, -2.08, 2.675, 0));
+  door.add(box(.26, 5.35, .34, frameMat, 2.08, 2.675, 0));
   door.add(box(4.6, .3, .36, frameMat, 0, 4.92, 0));
   door.add(box(4.7, .2, .55, frameMat, 0, .08, .1));
   // 扉の奥の白い光の間（開いた時に見える）
@@ -1123,6 +1123,33 @@ export async function buildHagaki(data) {
   W.hagakiPivot = pivot;
   W.hagakiMats = [fmat, bmat, emat];
   return g;
+}
+// 実カードDOM（画面表示そのもの）を html2canvas で撮ってテクスチャを差し替える。
+// 手描きテクスチャはフォントサイズ/レイアウトが実表示と一致しないため、
+// 成功したら必ずこちらを使う（失敗時のみ手描きフォールバックが残る）
+export async function refreshHagakiTextures() {
+  const { captureCardFaces } = await import('../print.js');
+  const { front, back } = await captureCardFaces();
+  const load = (url) => new Promise((res, rej) => {
+    const img = new Image();
+    img.onload = () => res(img);
+    img.onerror = rej;
+    img.src = url;
+  });
+  const [fi, bi] = await Promise.all([load(front), load(back)]);
+  const mk = (img) => {
+    const t = new THREE.Texture(img);
+    t.needsUpdate = true;
+    t.colorSpace = THREE.SRGBColorSpace;
+    t.anisotropy = 4;
+    return t;
+  };
+  const [fmat, bmat] = W.hagakiMats;
+  fmat.map?.dispose(); bmat.map?.dispose();
+  fmat.map = mk(fi);
+  bmat.map = mk(bi);
+  fmat.needsUpdate = true;
+  bmat.needsUpdate = true;
 }
 export function showHagaki(v) { if (W.hagaki) W.hagaki.visible = v; }
 // 黒シルエット化（テクスチャ色を乗算で落とす。解除時はアイボリー基調色へ戻す）

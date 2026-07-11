@@ -205,6 +205,19 @@ async function printAsImage(popup) {
   openPrintWindow(popup, [greetingImg, addressImg]);
 }
 
+// ガチャ演出用: 画面表示と同一レイアウトのまま表裏をデータURL化する
+// （印刷と違い、切手・郵便番号は残し、挨拶文パネルの半透明も画面のままにする）
+export async function captureCardFaces() {
+  const greetingEl = document.querySelector(GREETING_SELECTOR);
+  const addressEl = document.querySelector(ADDRESS_SELECTOR);
+  const back = await captureElement(greetingEl, {});
+  const front = await captureElement(addressEl, {
+    hideSelectors: ['.tap-hint', '.tap-hint__text'],
+    beforeCapture: () => verticalizeElements(['.address-main', '.sender']),
+  });
+  return { front, back };
+}
+
 export function initPrint() {
   const btn = document.getElementById('btn-print');
   if (!btn) return;
