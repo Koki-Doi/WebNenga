@@ -1,31 +1,46 @@
 // js/card-analytics.js
-// 共有リンクのカードID(#id=…)を GA4 イベントに付与して、ID単位で開封状況を追えるようにする。
-// ※ 宛名・差出人・本文などの個人情報は送らない（card_id のみ）。
-//    GA4 側で「カスタムディメンション card_id（イベントスコープ）」を登録すると
-//    探索レポートやリアルタイムで ID ごとに絞り込める。
-import { parseHash } from './utils.js';
+// 共有リンクのカードID(#id=…)・宛名・差出人を GA4 イベントに付与して、
+// 「誰宛のカードが開封/完走したか」を個別に追えるようにする。
+// GA4 側でカスタムディメンション card_id / recipient / sender（イベントスコープ）を
+// 登録すると探索レポートやリアルタイムで絞り込める。
+import { parseHash, decodeData } from './utils.js';
 
-const getCardId = () => {
-  try { return parseHash(location.hash)?.id ?? null; } catch { return null; }
+const getCardInfo = () => {
+  try {
+    const p = parseHash(location.hash);
+    if (!p) return null;
+    const obj = decodeData(p.data) || {};
+    return {
+      id: p.id,
+      recipient: String(obj.a ?? '').trim() || null,   // 宛名（敬称は含まない）
+      sender: String(obj.s ?? '').trim() || null,      // 差出人
+    };
+  } catch { return null; }
 };
 
 /** GA4 イベント送信（gtag 未ロード時は何もしない） */
 export function trackCard(eventName, params = {}) {
   if (typeof window.gtag !== 'function') return;
-  const id = getCardId();
+  const info = getCardInfo();
   window.gtag('event', eventName, {
-    card_id: id ?? '(no_id)',
+    card_id: info?.id ?? '(no_id)',
+    recipient: info?.recipient ?? '(none)',
+    sender: info?.sender ?? '(none)',
     ...params,
   });
 }
 
 window.addEventListener('DOMContentLoaded', () => {
-  const id = getCardId();
-  if (!id) return; // 共有リンク以外（素のエディタ画面）は計測しない
+  const info = getCardInfo();
+  if (!info) return; // 共有リンク以外（素のエディタ画面）は計測しない
 
   // ユーザープロパティにも入れておく（ユーザースコープ分析用）
   if (typeof window.gtag === 'function') {
-    window.gtag('set', 'user_properties', { card_id: id });
+    window.gtag('set', 'user_properties', {
+      card_id: info.id,
+      recipient: info.recipient ?? '(none)',
+      sender: info.sender ?? '(none)',
+    });
   }
 
   // 開封（共有リンクでの表示）
