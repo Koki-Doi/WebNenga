@@ -43,7 +43,7 @@ function buildOverlay() {
               <i class="gc-qi-shoe"></i><b>×2027</b>
             </div>
             <div class="gc-rv-band">
-              <div class="gc-rv-epithet">［謹賀新年 2027］</div>
+              <div class="gc-rv-epithet">［2027年 年賀状］</div>
               <div class="gc-rv-name">差出人</div>
             </div>
             <div class="gc-rv-stars"><span>★</span><span>★</span><span>★</span></div>
