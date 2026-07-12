@@ -219,12 +219,10 @@ async function initEngine(cardData) {
       uiMod.SFX.ding();
       uiMod.SFX.bgmStart();
       const done = new Promise((res) => { doneResolver = res; });
-      // 引いた瞬間の虹色バースト → フェーズ開始
-      uiMod.UI.flash(.14, .6, .05, true);
-      // 実カードDOMをそのままテクスチャ化（オーバーレイが覆っている間に撮る）。
-      // バースト中に間に合わなければ手描きのまま開始し、完了次第差し替わる
-      const texSwap = world.refreshHagakiTextures().catch((e) => console.warn('[gacha] face capture failed', e));
-      await Promise.race([texSwap, new Promise((r) => setTimeout(r, 900))]);
+      // 実カードDOMをそのままテクスチャ化（扇子カットの裏で並行して完了する。
+      // ハガキ初登場は dash なので待たずに開演してよい）
+      world.refreshHagakiTextures().catch((e) => console.warn('[gacha] face capture failed', e));
+      // タップ直後は虹バースト等を挟まず、即「激熱ッ！」へ
       runFrom(DEBUG_PHASE ? Math.max(0, PHASES.findIndex((p) => p.name === DEBUG_PHASE)) : 0);
       await done;
       trackCard('gacha_complete', { duration_sec: Math.round((performance.now() - t0) / 1000) });
