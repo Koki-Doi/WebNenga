@@ -163,7 +163,7 @@ export const SFX = {
 function show(id, v = true) { $(id).classList.toggle('show', v); }
 UI.show = show;
 UI.hideAllOverlays = () => {
-  for (const id of ['gc-fan', 'gc-speech', 'gc-reveal-ui']) show(id, false);
+  for (const id of ['gc-speech', 'gc-reveal-ui']) show(id, false);
 };
 UI.flash = (inDur = .12, outDur = .5, hold = 0, rainbow = false) => new Promise((res) => {
   const el = $('gc-flash');
@@ -179,79 +179,6 @@ UI.flash = (inDur = .12, outDur = .5, hold = 0, rainbow = false) => new Promise(
       });
     }
   });
-});
-
-// ---------- 扇子カットイン（白い紙扇 + 青海波） ----------
-UI.buildFan = () => {
-  const root = $('gc-fan');
-  const A1 = -160, A2 = -20, R = 100, RI = 22;
-  const rad = (d) => d * Math.PI / 180;
-  const px = (r, a) => (r * Math.cos(rad(a))).toFixed(2);
-  const py = (r, a) => (r * Math.sin(rad(a))).toFixed(2);
-  const ring = (ri, ro) =>
-    `M ${px(ri, A1)} ${py(ri, A1)} L ${px(ro, A1)} ${py(ro, A1)} ` +
-    `A ${ro} ${ro} 0 0 1 ${px(ro, A2)} ${py(ro, A2)} L ${px(ri, A2)} ${py(ri, A2)} ` +
-    `A ${ri} ${ri} 0 0 0 ${px(ri, A1)} ${py(ri, A1)} Z`;
-  const paper = ring(RI, R);
-  let ribs = '';
-  for (let i = 0; i <= 13; i++) {
-    const a = A1 + (A2 - A1) * i / 13;
-    ribs += `<line x1="${px(RI - 6, a)}" y1="${py(RI - 6, a)}" x2="${px(R - 2, a)}" y2="${py(R - 2, a)}"/>`;
-  }
-  let waves = '';
-  for (const [rr, off] of [[97, 0], [86, 5.4]]) {
-    for (let a = A1 + off; a <= A2; a += 10.8) {
-      for (const wr of [13, 9.5, 6, 2.8]) {
-        waves += `<circle cx="${px(rr, a)}" cy="${py(rr, a)}" r="${wr}"/>`;
-      }
-    }
-  }
-  let dots = '';
-  for (let i = 0; i < 24; i++) {
-    const a = A1 + Math.random() * (A2 - A1);
-    const r = 34 + Math.random() * 36;
-    dots += `<circle cx="${px(r, a)}" cy="${py(r, a)}" r="${1.2 + Math.random() * 1.3}"/>`;
-  }
-  root.innerHTML = `
-    <div class="gc-fan-rig">
-      <svg viewBox="-108 -108 216 134" preserveAspectRatio="xMidYMid meet">
-        <path d="${paper}" fill="#faf6ea" stroke="#d8c9a3" stroke-width="2"/>
-        <g clip-path="url(#gcfan-clip)">
-          <g clip-path="url(#gcfan-band)" fill="none" stroke="#79b5e2" stroke-width="2">${waves}</g>
-          <g fill="#a8cfe8">${dots}</g>
-          <g stroke="rgba(150,125,80,.38)" stroke-width="1.1">${ribs}</g>
-        </g>
-        <defs>
-          <clipPath id="gcfan-clip"><path d="${paper}"/></clipPath>
-          <clipPath id="gcfan-band"><path d="${ring(72, 100)}"/></clipPath>
-        </defs>
-        <path d="${paper}" fill="none" stroke="#d2a44a" stroke-width="3"/>
-        <line x1="${px(RI - 10, A1)}" y1="${py(RI - 10, A1)}" x2="${px(R, A1)}" y2="${py(R, A1)}" stroke="#6b4a26" stroke-width="5.5" stroke-linecap="round"/>
-        <line x1="${px(RI - 10, A2)}" y1="${py(RI - 10, A2)}" x2="${px(R, A2)}" y2="${py(R, A2)}" stroke="#6b4a26" stroke-width="5.5" stroke-linecap="round"/>
-        <rect x="-5" y="2" width="10" height="21" rx="4.5" fill="#6b4a26"/>
-        <path d="M 26 30 Q 6 22 9 6 L 34 20 Z" fill="#7a5a3a"/>
-        <ellipse cx="7" cy="13" rx="11" ry="8" fill="#f6cfae"/>
-        <circle cx="0" cy="0" r="6" fill="#e8b94f" stroke="#a87820" stroke-width="2"/>
-      </svg>
-      <div class="gc-gk-pos"><div class="gc-gekiatsu">激熱<span class="small">ッ！</span></div></div>
-    </div>`;
-};
-UI.playFan = (tk) => new Promise((res) => {
-  const root = $('gc-fan');
-  show('gc-fan', true);
-  const rig = root.querySelector('.gc-fan-rig');
-  const text = root.querySelector('.gc-gekiatsu');
-  const tl = gsap.timeline({ onComplete: () => { show('gc-fan', false); res(); } });
-  tk?._tweens.add(tl);
-  tl.set(root, { opacity: 1 })
-    .fromTo(rig,
-      { xPercent: -50, yPercent: 42, rotation: -24, scale: .84, opacity: 1 },
-      { xPercent: -50, yPercent: -38, rotation: -6, scale: 1, duration: .42, ease: 'back.out(1.4)' })
-    .fromTo(text, { scale: 2.7, opacity: 0 }, { scale: 1, opacity: 1, duration: .2, ease: 'power4.in' }, .32)
-    .add(() => { SFX.thud(); SFX.sparkle(.05); }, .5)
-    .to(rig, { rotation: -8.5, duration: .15, yoyo: true, repeat: 3, ease: 'sine.inOut' }, .54)
-    .to({}, { duration: .55 })
-    .to(root, { opacity: 0, duration: .22, ease: 'power2.in' });
 });
 
 // ---------- セリフ画面 ----------

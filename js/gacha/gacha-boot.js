@@ -29,7 +29,6 @@ function buildOverlay() {
     <div id="gc-stage">
       <canvas id="gc-three"></canvas>
       <div id="gc-ui">
-        <div id="gc-fan" class="gc-ov"></div>
         <div id="gc-speech" class="gc-ov">
           <div id="gc-speech-stars"></div>
           <div id="gc-speech-box"><p id="gc-speech-text"></p></div>
@@ -76,11 +75,12 @@ async function initEngine(cardData) {
   const stageEl = overlay.querySelector('#gc-stage');
   const { W } = world;
   world.initWorld(overlay.querySelector('#gc-three'));
-  uiMod.UI.buildFan();
-  // 筆文字フォント先読み
-  try { document.fonts.load('100px "Yuji Boku"', '激熱ッ！'); } catch (e) { }
+  // フォント先読み（扇面の筆文字テクスチャ用に Yuji Boku を確実に）
   try { await document.fonts.load('700 40px "Noto Sans JP"', '謹賀新年'); } catch (e) { }
-  await world.buildHagaki(GACHA.card);
+  await Promise.all([
+    world.buildHagaki(GACHA.card),
+    world.buildFan3D(),
+  ]);
 
   // ---- キャンセルトークン / ランナー（gacha-demo main.js と同型） ----
   const PHASES = phasesMod.makePhases();

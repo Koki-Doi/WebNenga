@@ -1170,6 +1170,154 @@ export function resetHagakiPose() {
   W.hagakiPivot.scale.setScalar(1);
 }
 
+// ---------- 3D扇子 + 手（「激熱ッ！」カットイン用） ----------
+// 蛇腹に折れた扇面（アニュラーセクタ。放射ラインごとに z を交互に振って折り目を作る）
+function fanSectorGeometry(ri, ro, a1, a2, seg, pleat) {
+  const pos = [], uv = [], idx = [];
+  for (let i = 0; i <= seg; i++) {
+    const t = i / seg;
+    const a = a1 + (a2 - a1) * t;
+    const z = (i % 2 ? pleat : -pleat);
+    const ca = Math.cos(a), sa = Math.sin(a);
+    // 内周は折り幅を弱める（要に近いほど折りが浅い）
+    pos.push(ca * ri, sa * ri, z * .3, ca * ro, sa * ro, z);
+    // 角度→U（画面右=角度小 が canvas 右になるよう反転）、半径→V
+    uv.push(1 - t, 0, 1 - t, 1);
+  }
+  for (let i = 0; i < seg; i++) {
+    const b = i * 2;
+    idx.push(b, b + 2, b + 1, b + 1, b + 2, b + 3);
+  }
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+  g.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2));
+  g.setIndex(idx);
+  g.computeVertexNormals();
+  return g;
+}
+// 扇面テクスチャ（青海波 + 小紋 + 筆文字「激熱ッ！」）。展開図: x=角度方向, y=半径方向(上=外周)
+async function fanPaperTexture() {
+  try { await document.fonts.load('200px "Yuji Boku"', '激熱ッ！'); } catch (e) { }
+  return ct(1024, 512, (g, w, h) => {
+    g.fillStyle = '#faf6ea'; g.fillRect(0, 0, w, h);
+    // 折り目の陰影（放射方向の縦ストライプ）
+    for (let i = 0; i < 28; i++) {
+      g.fillStyle = i % 2 ? 'rgba(120,95,55,.07)' : 'rgba(255,255,255,.05)';
+      g.fillRect((w / 28) * i, 0, w / 28, h);
+    }
+    // 外周の青海波帯（上端 = 外周）
+    g.save();
+    g.beginPath(); g.rect(0, 0, w, h * .30); g.clip();
+    g.strokeStyle = '#79b5e2'; g.lineWidth = 5;
+    for (const [yy, off] of [[h * .02, 0], [h * .17, w * .045]]) {
+      for (let x = -w * .05 + off; x < w * 1.05; x += w * .09) {
+        for (const rr of [h * .13, h * .095, h * .06, h * .028]) {
+          g.beginPath(); g.arc(x, yy, rr, 0, Math.PI); g.stroke();
+        }
+      }
+    }
+    g.restore();
+    g.strokeStyle = '#d2a44a'; g.lineWidth = 9;
+    g.beginPath(); g.moveTo(0, h * .31); g.lineTo(w, h * .31); g.stroke();
+    g.beginPath(); g.moveTo(0, 5); g.lineTo(w, 5); g.stroke();
+    // 中程の小紋ドット
+    g.fillStyle = '#a8cfe8';
+    for (let i = 0; i < 46; i++) {
+      const x = Math.random() * w, y = h * (.34 + Math.random() * .58);
+      g.beginPath(); g.arc(x, y, 3 + Math.random() * 4.5, 0, TAU); g.fill();
+    }
+    // 筆文字「激熱ッ！」（扇の中帯に大きく）
+    g.save();
+    g.translate(w / 2, h * .60);
+    g.rotate(-.04);
+    g.fillStyle = '#16120c';
+    g.textAlign = 'center'; g.textBaseline = 'middle';
+    g.font = '200px "Yuji Boku", "Noto Sans JP", serif';
+    g.fillText('激熱', -110, 0);
+    g.font = '120px "Yuji Boku", "Noto Sans JP", serif';
+    g.fillText('ッ！', 210, 28);
+    g.restore();
+    // 朱の落款風アクセント
+    g.fillStyle = 'rgba(200,60,40,.85)';
+    g.fillRect(w * .87, h * .78, 44, 44);
+    g.fillStyle = '#faf6ea';
+    g.font = '700 26px "Noto Sans JP", serif';
+    g.textAlign = 'center'; g.textBaseline = 'middle';
+    g.fillText('新春', w * .87 + 22, h * .78 + 23);
+  });
+}
+export async function buildFan3D() {
+  const R = .52, RI = .13;
+  const A1 = Math.PI * (20 / 180), A2 = Math.PI * (160 / 180);
+  // outer(位置+カメラ正対) > inner(傾き/扇ぎアニメ) の2層
+  const outer = new THREE.Group();
+  const group = new THREE.Group();
+  outer.add(group);
+
+  // 扇面（両面・折り目付き）
+  const paperTex = await fanPaperTexture();
+  const paper = new THREE.Mesh(
+    fanSectorGeometry(RI, R, A1, A2, 28, .012),
+    new THREE.MeshLambertMaterial({ map: paperTex, side: THREE.DoubleSide, emissive: 0x555044 })
+  );
+  group.add(paper);
+
+  // 骨（中骨14本 + 太い親骨2本）と要
+  const ribMat = M.lamb({ color: 0x6b4a26, emissive: 0x1a0f06 });
+  for (let i = 0; i <= 13; i++) {
+    const a = A1 + (A2 - A1) * (i / 13);
+    const rib = box(.011, R - .02, .006, ribMat, 0, 0, 0);
+    rib.position.set(Math.cos(a) * (R - .02) / 2, Math.sin(a) * (R - .02) / 2, -.012);
+    rib.rotation.z = a - Math.PI / 2;
+    group.add(rib);
+  }
+  for (const a of [A1, A2]) {
+    const guard = box(.024, R + .01, .012, M.lamb({ color: 0x5a3c1e, emissive: 0x160c04 }), 0, 0, 0);
+    guard.position.set(Math.cos(a) * R / 2, Math.sin(a) * R / 2, .002);
+    guard.rotation.z = a - Math.PI / 2;
+    group.add(guard);
+  }
+  const pin = new THREE.Mesh(new THREE.CylinderGeometry(.022, .022, .05, 12), M.lamb({ color: 0xe8b94f, emissive: 0x553808 }));
+  pin.rotation.x = Math.PI / 2;
+  group.add(pin);
+  // 手元の柄（握り）
+  group.add(box(.034, .13, .022, ribMat, 0, -.085, 0));
+
+  // 手（掌 + 指4本 + 親指 + 袖）— デフォルメの3Dハンド
+  const skin = M.lamb({ color: 0xf6cfae, emissive: 0x40301e });
+  const hand = new THREE.Group();
+  const palm = new THREE.Mesh(new THREE.SphereGeometry(.075, 14, 12), skin);
+  palm.scale.set(1.05, .8, .62);
+  palm.position.set(.045, -.115, .015);
+  hand.add(palm);
+  for (let i = 0; i < 4; i++) {
+    const f = new THREE.Mesh(new THREE.CapsuleGeometry(.017, .05, 4, 8), skin);
+    f.position.set(-.012, -.055 - i * .036, .035);
+    f.rotation.z = Math.PI / 2 - .12;
+    hand.add(f);
+  }
+  const thumb = new THREE.Mesh(new THREE.CapsuleGeometry(.019, .045, 4, 8), skin);
+  thumb.position.set(.02, -.05, .03);
+  thumb.rotation.z = .45;
+  hand.add(thumb);
+  // 袖（濃紅の筒）と腕: 右下画面外へ伸びる
+  const sleeve = new THREE.Mesh(new THREE.CylinderGeometry(.085, .105, .34, 14), M.lamb({ color: 0x7a2430, emissive: 0x1c0508 }));
+  sleeve.position.set(.22, -.32, .0);
+  sleeve.rotation.z = .62;
+  hand.add(sleeve);
+  const cuff = new THREE.Mesh(new THREE.CylinderGeometry(.088, .088, .05, 14), M.lamb({ color: 0xe8b94f, emissive: 0x553808 }));
+  cuff.position.set(.135, -.215, 0);
+  cuff.rotation.z = .62;
+  hand.add(cuff);
+  group.add(hand);
+
+  outer.visible = false;
+  W.scene.add(outer);
+  W.fan3d = outer;
+  W.fan3dInner = group;
+  return outer;
+}
+
 // ---------- 環境切替 ----------
 export function setEnv(name) {
   const { scene, corridorG, raceG, revealG, amb, key, rim } = W;
@@ -1230,6 +1378,7 @@ export function resetFx() {
   W.revealSpark.set(false);
   for (const p of W.penlights ?? []) p.set(false);
   if (W.hagaki) { resetHagakiPose(); setHagakiSilhouette(false); }
+  if (W.fan3d) W.fan3d.visible = false;
   if (W.teaserGlow) W.teaserGlow.material.opacity = 0;
   if (W.revealSun) W.revealSun.material.opacity = 0;
   if (W.revealSunCross) W.revealSunCross.material.opacity = 0;

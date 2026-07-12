@@ -24,29 +24,6 @@
 #gc-ui .gc-ov { position: absolute; inset: 0; opacity: 0; visibility: hidden; }
 #gc-ui .gc-ov.show { opacity: 1; visibility: visible; }
 
-/* ============ 扇子カットイン ============ */
-#gc-fan { overflow: hidden; }
-#gc-fan .gc-fan-rig {
-  position: absolute; left: 50%; top: 50%;
-  width: calc(var(--gsu) * 74);
-  transform-origin: 50% 82%;
-  filter: drop-shadow(0 calc(var(--gsu) * 0.9) calc(var(--gsu) * 2.2) rgba(40, 15, 5, .45));
-}
-#gc-fan .gc-fan-rig svg { width: 100%; display: block; overflow: visible; }
-#gc-fan .gc-gk-pos {
-  position: absolute; left: 50%; top: 34%;
-  transform: translate(-50%, -50%) rotate(-12deg);
-}
-#gc-fan .gc-gekiatsu {
-  font-family: "Yuji Boku", serif;
-  font-size: calc(var(--gsu) * 12.5);
-  color: #16120c;
-  white-space: nowrap;
-  letter-spacing: -0.06em;
-  text-shadow: calc(var(--gsu) * 0.28) calc(var(--gsu) * 0.28) 0 rgba(180, 40, 30, .22);
-}
-#gc-fan .gc-gekiatsu .small { font-size: .58em; }
-
 /* ============ セリフ画面 ============ */
 #gc-speech {
   background:

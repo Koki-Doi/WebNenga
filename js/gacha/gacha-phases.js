@@ -32,14 +32,32 @@ export function makePhases() {
   const phases = [];
   const P = (name, enter) => phases.push({ name, enter });
 
-  // ---- 0. 扇子カットイン「激熱ッ！」（廊下を背景に） ----
+  // ---- 0. 扇子カットイン「激熱ッ！」（廊下を背景に、3Dの紙扇+手を掲げる） ----
   P('fan', async (tk) => {
     resetFx();
     setEnv('corridor');
     showHagaki(false);
     SFX.whoosh(.4);
     setCam(0, 1.6, 2.4, 0, 2.7, -7, 48);
-    await UI.playFan(tk);
+    const f = W.fan3d, fi = W.fan3dInner;
+    f.visible = true;
+    // 最終位置（視線中心の高さ）でカメラへ正対させてから、開始位置=画面下へ
+    f.position.set(.05, 1.42, 1.02);
+    f.lookAt(0, 1.6, 2.4);
+    f.position.y = .5;
+    fi.rotation.set(0, 0, -.42);
+    await tk.tw(f.position, { y: 1.42, duration: .42, ease: 'back.out(1.4)' });
+    if (tk.cancelled) return;
+    // 見得切り: 起こしてから小刻みに扇ぐ
+    SFX.thud(); SFX.sparkle(.05);
+    tk.tw(fi.rotation, { z: -.07, duration: .38, ease: 'power2.out' });
+    await tk.tw(fi.rotation, { x: .06, duration: .15, yoyo: true, repeat: 3, ease: 'sine.inOut' });
+    if (tk.cancelled) return;
+    await tk.wait(.5);
+    if (tk.cancelled) return;
+    // 下へ振り抜けて退場
+    await tk.tw(f.position, { y: .25, x: -.2, duration: .22, ease: 'power2.in' });
+    f.visible = false;
   });
 
   // ---- 1. 廊下: 年賀ハガキが馬蹄の扉へ舞い飛ぶ ----
@@ -135,7 +153,7 @@ export function makePhases() {
     state.after = .5;
     SFX.whoosh(1.2);
     SFX.sparkle(.6, 900);
-    tk.tw({ v: 0 }, { v: 1, duration: 1.1, onComplete: () => { W.standG.visible = false; } });
+    for (const p of W.penlights) p.set(true);   // 観客席のペンライトは点けたまま
     setCam(-22, 4.4, -10, 25, 1.9, -15, 54);
     await Promise.all([
       tk.tw(cs(), { px: 0, py: 1.8, pz: 12.5, duration: 1.9, ease: 'power1.inOut' }),
@@ -155,7 +173,7 @@ export function makePhases() {
     resetFx();
     setEnv('race');
     showHagaki(false);
-    W.standG.visible = false;
+    for (const p of W.penlights) p.set(true);
     state.bloom = .55;
     W.confetti.place({ x: 0, y: 6, z: 6 }, { x: 16, y: 7, z: 12 });
     W.confetti.set(true);
@@ -176,7 +194,7 @@ export function makePhases() {
     setSil(false);
     setEnv('race');
     showHagaki(false);
-    W.standG.visible = false;
+    for (const p of W.penlights) p.set(true);
     state.bloom = .42;
     W.confetti.place({ x: 0, y: 6, z: 6 }, { x: 16, y: 7, z: 12 });
     W.confetti.set(true);
@@ -216,7 +234,7 @@ export function makePhases() {
     resetFx();
     setEnv('race');
     showHagaki(false);
-    W.standG.visible = false;
+    for (const p of W.penlights) p.set(true);
     state.bloom = .45;
     const L = W.lampPos;
     setCam(L.x - .85, L.y - .6, L.z + 2.4, L.x, L.y, L.z - .6, 36);
@@ -243,7 +261,7 @@ export function makePhases() {
     resetFx();
     setEnv('race');
     showHagaki(true);
-    W.standG.visible = false;
+    for (const p of W.penlights) p.set(true);
     // ゲート房の内側（格子扉 z-4.5 の奥）に立たせる。出走前なので回転はさせない
     W.hagaki.position.set(SSR_X, 1.3, -5.0);
     W.hagaki.rotation.set(0, 0, 0);
@@ -275,7 +293,7 @@ export function makePhases() {
     resetFx();
     setEnv('race');
     showHagaki(true);
-    W.standG.visible = false;
+    for (const p of W.penlights) p.set(true);
     // ゲート房の内側から発走する（扉が開くのと同時に飛び出す）
     W.hagaki.position.set(SSR_X, 1.25, -5.0);
     const go = W.gateObjs.find((o) => o.isSSR);
