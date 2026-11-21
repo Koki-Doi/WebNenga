@@ -1,0 +1,125 @@
+<!doctype html>
+<html lang="ja"><meta charset="utf-8"><title>モデル形状の回帰確認</title>
+<script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/"}}</script>
+<h1>モデル形状の回帰確認</h1><pre id="results">実行中…</pre>
+<script type="module">
+import * as THREE from 'three';
+import { fanSectorGeometry, rodBetween, instancedRods, batchStaticMeshes, sharedGeometry } from '../js/gacha/model-geometry.js';
+import { buildFanHand } from '../js/gacha/fan-hand.js';
+import { initWorld, W, setStartLamp, setGateCenterFlash, resetFx } from '../js/gacha/gacha-world.js';
+import { RACE_LAYOUT, courseCamera } from '../js/gacha/race-layout.js';
+const output = document.getElementById('results');
+const results = [];
+function check(name, run) {
+  try { run(); results.push(`PASS ${name}`); }
+  catch (error) { results.push(`FAIL ${name}: ${error.message}`); }
+  output.textContent = results.join('\n');
+}
+function assert(value, message) { if (!value) throw new Error(message); }
+const material = new THREE.MeshBasicMaterial();
+check('扇面: 28折り、正面の法線、有限の頂点とUV', () => {
+  const g = fanSectorGeometry(.13, .52, Math.PI / 9, Math.PI * 8 / 9, 28, .012);
+  assert(g.attributes.position.count === 168, '頂点数');
+  assert(g.index === null, '折り目の法線を共有しない');
+  for (const key of ['position', 'normal', 'uv']) assert([...g.attributes[key].array].every(Number.isFinite), key);
+  for (let i = 0; i < g.attributes.normal.count; i++) assert(g.attributes.normal.getZ(i) > 0, '正面向き');
+  assert(g.attributes.normal.getX(0) !== g.attributes.normal.getX(6), '隣り合う面に異なる陰影');
+  g.dispose();
+});
+check('筋交い: 指定した両端に正しく接続する', () => {
+  const a = [1, 2, 3], b = [-2, 4, 1];
+  const rod = rodBetween(a, b, .02, material);
+  rod.updateMatrixWorld(true);
+  const start = new THREE.Vector3(0, -.5, 0).applyMatrix4(rod.matrixWorld);
+  const end = new THREE.Vector3(0, .5, 0).applyMatrix4(rod.matrixWorld);
+  assert(start.distanceTo(new THREE.Vector3(...a)) < 1e-6, '始点');
+  assert(end.distanceTo(new THREE.Vector3(...b)) < 1e-6, '終点');
+});
+check('格子: インスタンス数・境界球が正しい', () => {
+  const rods = instancedRods([[[0, 0, 0], [0, 2, 0]], [[1, 0, 0], [1, 2, 0]]], .01, material);
+  assert(rods.count === 2, '本数');
+  assert(rods.boundingSphere.radius > 1 && Number.isFinite(rods.boundingSphere.radius), '境界球');
+});
+check('静止部品の集約: 位置を保持し、透過FXと子グループを保持する', () => {
+  const group = new THREE.Group();
+  const geometry = new THREE.BoxGeometry(1, 1, 1);
+  for (let i = 0; i < 3; i++) { const m = new THREE.Mesh(geometry, material); m.position.x = i * 2; group.add(m); }
+  const fx = new THREE.Mesh(geometry, new THREE.MeshBasicMaterial({ transparent: true }));
+  const pivot = new THREE.Group(); group.add(fx, pivot);
+  batchStaticMeshes(group);
+  const batch = group.children.find((c) => c.isInstancedMesh);
+  assert(batch?.count === 3 && group.children.includes(fx) && group.children.includes(pivot), '対象の選別');
+  const matrix = new THREE.Matrix4(); batch.getMatrixAt(2, matrix);
+  assert(matrix.elements[12] === 4, '元の位置');
+});
+check('静的形状キャッシュは同じ形状を再利用する', () => {
+  const first = sharedGeometry('test:box', () => new THREE.BoxGeometry());
+  assert(first === sharedGeometry('test:box', () => { throw new Error('二重生成'); }), '同一形状');
+});
+check('握り手: 5指の立体形状と法線が有限で、柄の前後を包む', () => {
+  const hand = buildFanHand();
+  const digits = hand.children.filter((m) => m.name.startsWith('finger-') || m.name === 'thumb');
+  assert(digits.length === 5, '5指');
+  for (const digit of digits) {
+    const g = digit.geometry; g.computeBoundingBox();
+    assert(g.boundingBox.max.z - g.boundingBox.min.z > .025, '厚み');
+    for (const key of ['position', 'normal']) assert([...g.attributes[key].array].every(Number.isFinite), key);
+  }
+  // 指の断面で、法線が中心から外へ向いていることを確認する。
+  const finger = hand.getObjectByName('finger-0');
+  const pos = finger.geometry.attributes.position, normal = finger.geometry.attributes.normal;
+  const center = new THREE.Vector3();
+  for (let i = 0; i < 12; i++) center.add(new THREE.Vector3().fromBufferAttribute(pos, 16 * 13 + i));
+  center.divideScalar(12);
+  for (let i = 0; i < 12; i++) {
+    const index = 16 * 13 + i;
+    const outward = new THREE.Vector3().fromBufferAttribute(pos, index).sub(center);
+    assert(outward.dot(new THREE.Vector3().fromBufferAttribute(normal, index)) > 0, '外向きの法線');
+  }
+  assert(finger.geometry.boundingBox.min.z < -.02 && finger.geometry.boundingBox.max.z > .03, '柄を表裏から握る');
+});
+check('観客席の全形状がラチの外側にあり、カメラ・コースと交差しない', () => {
+  initWorld(document.createElement('canvas'));
+  W.scene.updateMatrixWorld(true);
+  const bounds = new THREE.Box3().setFromObject(W.standG);
+  assert(bounds.min.x > RACE_LAYOUT.railX + 2, '屋根を含む観客席全体が走路から離れている');
+  assert(bounds.max.z - bounds.min.z > 150, '観客席はコース沿いに伸びる');
+  for (let i = 0; i <= 100; i++) {
+    const camera = courseCamera(i / 100);
+    assert(camera.px < bounds.min.x - 1, 'カメラが観客席を通過しない');
+  }
+  const courseView = courseCamera(.7), standCenter = bounds.getCenter(new THREE.Vector3());
+  const forwardX = courseView.lx - courseView.px, forwardZ = courseView.lz - courseView.pz;
+  const screenRight = -forwardZ * (standCenter.x - courseView.px)
+    + forwardX * (standCenter.z - courseView.pz);
+  assert(screenRight < 0, '進行方向へ見ると観客席が画面左にある');
+  assert(W.gatesG.position.x === 0 && W.gatesG.position.z === RACE_LAYOUT.gateZ, 'ゲートはコース内');
+});
+check('紙吹雪は空中に散り、落下後も床から生えない', () => {
+  W.confetti.place({ x: 0, y: 8, z: 20 }, { x: 16, y: 6, z: 20 });
+  W.confetti.set(true);
+  assert(W.confetti.items.length === 800, '十分な粒数');
+  assert(W.confetti.items.every((item) => item.p.y >= 2), '初期配置は空中');
+  W.confetti.update(20, 20);
+  assert(W.confetti.items.every((item) => item.p.y >= 2), '落下後も空中へ戻る');
+  W.confetti.set(false);
+});
+check('各ゲートの光は中央に来た房だけに出て、リセットで消える', () => {
+  setGateCenterFlash(.5262, 0);
+  assert(W.gateObjs.find((gate) => gate.n === 6).centerFlash.halo.material.opacity > .6, '中央の6番');
+  assert(W.gateObjs.find((gate) => gate.n === 5).centerFlash.halo.material.opacity === 0, '隣の5番');
+  resetFx();
+  assert(W.gateObjs.every((gate) => gate.centerFlash.halo.material.opacity === 0), '残光を残さない');
+});
+check('発走灯: 点灯状態を次のフェーズへ引き継ぎ、次回は消灯へ戻る', () => {
+  setStartLamp(true);
+  const litColor = W.lampMat.color.clone();
+  resetFx({ lampLit: true });
+  assert(W.lampG.visible && W.lampGlow.material.opacity > 0, '発走まで灯体と発光を維持');
+  assert(W.lampMat.color.equals(litColor), '点灯色を維持');
+  resetFx();
+  assert(W.lampG.visible && W.lampGlow.material.opacity === 0, '次回は灯体を残して消灯');
+  W.composer.dispose(); W.renderer.dispose();
+});
+document.title = results.some((r) => r.startsWith('FAIL')) ? 'FAIL: モデル形状' : `PASS: モデル形状 ${results.length}件`;
+</script></html>

@@ -3,11 +3,13 @@
 // 排出結果（SSR確定）として年賀状の裏面を届けるジョーク演出。
 // 演出エンジンは 年賀状2027/gacha-demo を移植（js/gacha/ 以下）。
 import { parseHash, decodeData } from '../utils.js';
-import { trackCard } from '../card-analytics.js';
+import { createCardTracker, setActiveGacha } from '../card-analytics.js';
+import { createFrameStats } from './frame-stats.js';
 
 let started = false;      // このロードで一度でも再生したか
 let engine = null;        // 遅延初期化されるエンジン一式
 let enginePromise = null;
+let engineInitMs = null;  // 計測用: エンジン初期化にかかった時間
 
 const qs = new URLSearchParams(location.search);
 const DEBUG_PHASE = qs.get('gphase');
@@ -21,10 +23,28 @@ function getCardData() {
   return obj;
 }
 
+// ---------- ロード中インジケータ ----------
+// エンジン（three/gsap+ワールド構築）の遅延ロード中に出す。CSS側の遅延フェードインにより
+// 先読み済みで即開演できる場合は視認されない。
+function showLoading() {
+  if (document.getElementById('gc-loading')) return;
+  const el = document.createElement('div');
+  el.id = 'gc-loading';
+  el.innerHTML = '<div class="gc-load-box"><i class="gc-load-spin"></i><span>ロード中…</span></div>';
+  document.body.appendChild(el);
+}
+function hideLoading() {
+  document.getElementById('gc-loading')?.remove();
+}
+
 // ---------- オーバーレイ DOM ----------
 function buildOverlay() {
   const root = document.createElement('div');
   root.id = 'gacha-overlay';
+  root.setAttribute('role', 'dialog');
+  root.setAttribute('aria-modal', 'true');
+  root.setAttribute('aria-label', '年賀状ガチャ');
+  root.tabIndex = -1;
   root.innerHTML = `
     <div id="gc-stage">
       <canvas id="gc-three"></canvas>
@@ -115,15 +135,25 @@ async function initEngine(cardData) {
         return new Promise((res) => {
           if (tk.cancelled) return res();
           const h = () => { cleanup(); res(); };
-          const cleanup = () => { stageEl.removeEventListener('pointerdown', h); tk._cleanups.delete(cleanup); };
+          const key = (e) => { if (e.target === overlay && ['Enter', ' '].includes(e.key)) { e.preventDefault(); h(); } };
+          const cleanup = () => {
+            stageEl.removeEventListener('pointerdown', h);
+            overlay.removeEventListener('keydown', key);
+            tk._cleanups.delete(cleanup);
+            res();
+          };
           tk._cleanups.add(cleanup);
           stageEl.addEventListener('pointerdown', h);
+          overlay.addEventListener('keydown', key);
         });
       },
     };
     return tk;
   }
   let doneResolver = null;
+  let trackGacha = () => {};
+  let skipped = false;
+  let phaseFailed = false;
   async function runFrom(idx) {
     token?.cancel();
     const tk = (token = mkToken());
@@ -135,6 +165,9 @@ async function initEngine(cardData) {
       } catch (e) {
         if (tk.cancelled) return;
         console.error(`[gacha:${PHASES[i].name}]`, e);
+        phaseFailed = true;
+        trackGacha('gacha_error', { error_code: 'phase_failed', phase: PHASES[i].name,
+          error_message: String(e?.message ?? e) });
       }
     }
     if (!tk.cancelled) doneResolver?.();
@@ -150,10 +183,12 @@ async function initEngine(cardData) {
 
   // ---- メインループ ----
   let running = false;
+  let frameId = 0;
   let manualMode = false;
   let gsapT = 0;
   let simT = 0;
   let lastT = 0;
+  const perf = createFrameStats();
   function frame(dt) {
     simT += dt;
     const t = simT;
@@ -169,24 +204,30 @@ async function initEngine(cardData) {
   }
   function tick(now) {
     if (!running) return;
-    requestAnimationFrame(tick);
+    frameId = requestAnimationFrame(tick);
     if (manualMode) return;
-    const dt = Math.min((now - lastT) / 1000 || 0, .05);
+    const rawDt = (now - lastT) / 1000;
+    const dt = Math.min(rawDt || 0, .05);
     lastT = now;
+    perf.add(rawDt);
     frame(dt);
   }
   function startLoop() {
     if (running) return;
     running = true;
     lastT = performance.now();
-    requestAnimationFrame(tick);
+    frameId = requestAnimationFrame(tick);
   }
-  function stopLoop() { running = false; }
+  function stopLoop() { running = false; cancelAnimationFrame(frameId); }
+
+  // HUD操作をセリフ送りとして拾わない。
+  overlay.querySelector('#gc-hud').addEventListener('pointerdown', (e) => e.stopPropagation());
 
   // ---- HUD ----
   overlay.querySelector('#gc-skip').addEventListener('click', (e) => {
     e.stopPropagation();
-    trackCard('gacha_skip', { phase: state.phase });
+    skipped = true;
+    trackGacha('gacha_skip', { phase: state.phase });
     uiMod.SFX.whoosh(.25);
     jumpTo('reveal');
   });
@@ -195,6 +236,7 @@ async function initEngine(cardData) {
     state.muted = !state.muted;
     uiMod.SFX.setMuted(state.muted);
     e.currentTarget.textContent = state.muted ? '🔇' : '🔊';
+    trackGacha('gacha_mute', { muted: state.muted ? 'on' : 'off', phase: state.phase });
   });
 
   return {
@@ -209,40 +251,75 @@ async function initEngine(cardData) {
       return manualMode;
     },
     step(n = 1, dt = 1 / 60) { for (let i = 0; i < n; i++) frame(dt); return `t=${simT.toFixed(2)} phase=${state.phase}`; },
-    async play() {
+    async play({ waitMs, preloaded, initMs, tracker = createCardTracker() } = {}) {
       const t0 = performance.now();
-      trackCard('gacha_start');
-      overlay.classList.add('show');
-      startLoop();
-      uiMod.SFX.init();
-      uiMod.SFX.ctx.resume?.();
-      uiMod.SFX.ding();
-      uiMod.SFX.bgmStart();
-      const done = new Promise((res) => { doneResolver = res; });
-      // 実カードDOMをそのままテクスチャ化（扇子カットの裏で並行して完了する。
-      // ハガキ初登場は dash なので待たずに開演してよい）
-      world.refreshHagakiTextures().catch((e) => console.warn('[gacha] face capture failed', e));
-      // タップ直後は虹バースト等を挟まず、即「激熱ッ！」へ
-      runFrom(DEBUG_PHASE ? Math.max(0, PHASES.findIndex((p) => p.name === DEBUG_PHASE)) : 0);
-      await done;
-      trackCard('gacha_complete', { duration_sec: Math.round((performance.now() - t0) / 1000) });
-      uiMod.SFX.bgmStop();
-      await new Promise((res) => {
-        overlay.style.transition = 'opacity .45s ease';
-        overlay.style.opacity = '0';
-        setTimeout(res, 470);
-      });
-      overlay.classList.remove('show');
-      overlay.style.opacity = '';
-      overlay.style.transition = '';
-      stopLoop();
+      trackGacha = tracker;
+      skipped = false;
+      phaseFailed = false;
+      state.speechTaps = 0;
+      state.speechAuto = 0;
+      state.revealExit = null;
+      perf.reset();
+      // 再生中に閉じられたら、card_leave にその場面と描画性能を付けられるようにする。
+      setActiveGacha(() => ({ phase: state.phase, ...perf.summary() }));
+      const previousFocus = document.activeElement;
+      try {
+        trackGacha('gacha_start', {
+          ...(waitMs != null ? { wait_ms: waitMs } : {}),
+          ...(preloaded != null ? { preloaded: preloaded ? 'yes' : 'no' } : {}),
+          ...(initMs != null ? { init_ms: initMs } : {}),
+        });
+        overlay.classList.add('show');
+        overlay.focus({ preventScroll: true });
+        startLoop();
+        uiMod.SFX.init();
+        uiMod.SFX.ctx?.resume?.().catch(() => {});
+        uiMod.SFX.ding();
+        uiMod.SFX.bgmStart();
+        const done = new Promise((res) => { doneResolver = res; });
+        // 実カードDOMをそのままテクスチャ化（扇子カットの裏で並行して完了する。
+        // ハガキ初登場は dash なので待たずに開演してよい）
+        world.refreshHagakiTextures().catch((e) => {
+          console.warn('[gacha] face capture failed', e);
+          trackGacha('gacha_error', { error_code: 'capture_failed', error_message: String(e?.message ?? e) });
+        });
+        // タップ直後は虹バースト等を挟まず、即「激熱ッ！」へ
+        runFrom(DEBUG_PHASE ? Math.max(0, PHASES.findIndex((p) => p.name === DEBUG_PHASE)) : 0);
+        await done;
+        trackGacha('gacha_complete', {
+          duration_sec: Math.round((performance.now() - t0) / 1000),
+          completion_reason: phaseFailed ? 'error' : skipped ? 'skipped' : 'completed',
+          ...perf.summary(),
+          speech_taps: state.speechTaps,
+          speech_auto: state.speechAuto,
+          ...(state.revealExit ? { reveal_exit: state.revealExit } : {}),
+        });
+      } finally {
+        setActiveGacha(null);
+        token?.cancel();
+        uiMod.SFX.bgmStop();
+        stopLoop();
+        await new Promise((res) => {
+          overlay.style.transition = 'opacity .45s ease';
+          overlay.style.opacity = '0';
+          setTimeout(res, 470);
+        });
+        overlay.classList.remove('show');
+        overlay.style.opacity = '';
+        overlay.style.transition = '';
+        previousFocus?.focus?.({ preventScroll: true });
+      }
     },
   };
 }
 
 function ensureEngine(cardData) {
   if (!enginePromise) {
-    enginePromise = initEngine(cardData).then((e) => (engine = e)).catch((err) => {
+    const t0 = performance.now();
+    enginePromise = initEngine(cardData).then((e) => {
+      engineInitMs = Math.round(performance.now() - t0);
+      return (engine = e);
+    }).catch((err) => {
       console.error('gacha init failed', err);
       enginePromise = null;
       throw err;
@@ -283,12 +360,20 @@ window.addEventListener('DOMContentLoaded', () => {
     e.preventDefault();
     started = true;
     container.removeEventListener('click', intercept, true);
+    showLoading();
+    const tTap = performance.now();
+    const tracker = createCardTracker();
+    const preloaded = !!engine;                 // タップ時点で先読みが終わっていたか
     try {
       const eng = await ensureEngine(data);
       window.__gacha = eng;                     // デバッグ/検証用フック
-      await eng.play();
+      hideLoading();
+      // タップから開演までの待ち時間と、先読みの状況・初期化時間
+      await eng.play({ waitMs: Math.round(performance.now() - tTap), preloaded, initMs: engineInitMs, tracker });
     } catch (err) {
+      hideLoading();
       console.error('gacha failed, falling back to flip', err);
+      tracker('gacha_error', { error_code: 'gacha_failed', error_message: String(err?.message ?? err) });
     }
     flipToBack();
   };

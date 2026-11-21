@@ -210,29 +210,25 @@ UI.showSpeech = () => {
   $('gc-speech-text').textContent = '';
   show('gc-speech', true);
 };
-UI.typeSpeech = (line, tk) => new Promise((res) => {
+UI.animateSpeech = (line) => {
   const el = $('gc-speech-text');
-  el.textContent = '';
-  const pr = { i: 0 };
-  let shown = 0;
-  const t = gsap.to(pr, {
-    i: line.length,
-    duration: line.length * .038,
-    ease: 'none',
-    onUpdate: () => {
-      const n = Math.floor(pr.i);
-      if (n !== shown) {
-        shown = n;
-        el.textContent = line.slice(0, n);
-        if (n % 3 === 0) SFX.tone(900 + Math.random() * 500, .04, 'square', .05);
-      }
-    },
-    onComplete: () => { el.textContent = line; res(); },
-    onInterrupt: () => res(),
-  });
-  tk?._tweens.add(t);
-});
-UI.hideSpeech = () => show('gc-speech', false);
+  const box = $('gc-speech-box');
+  el.replaceChildren(...line.split('\n').map((text) => {
+    const span = document.createElement('span');
+    span.className = 'gc-speech-line';
+    span.textContent = text;
+    return span;
+  }));
+  // 一文字ずつではなく、行全体をセル画のカットインのように一括表示する。
+  box.classList.remove('is-entering');
+  void box.offsetWidth;
+  box.classList.add('is-entering');
+  return Promise.resolve();
+};
+UI.hideSpeech = () => {
+  $('gc-speech-box').classList.remove('is-entering');
+  show('gc-speech', false);
+};
 
 // ---------- 確定帯（SSR 演出） ----------
 UI.showRevealLabels = (tk) => {

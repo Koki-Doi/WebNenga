@@ -1,6 +1,7 @@
 // js/csv-mode.js
 // CSVインポート→各行をURL化して「列G」に追記してダウンロード（1行目もデータ扱い）
 import { sanitize, encodeData, hashIdShort, showToast } from './utils.js';
+import { markCreatedCard } from './card-analytics.js';
 
 // 敬称コード → 表示文字
 const HONORIFIC_MAP = {
@@ -14,11 +15,12 @@ const HONORIFIC_MAP = {
 function toCSV(rows) {
   return rows.map(cols => cols.map(v => {
     const s = String(v ?? '');
-    return /[",\n]/.test(s) ? `"${s.replace(/"/g,'""')}"` : s;
+    return /[",\r\n]/.test(s) ? `"${s.replace(/"/g,'""')}"` : s;
   }).join(',')).join('\n');
 }
 
 export function parseCSV(text) {
+  text = text.replace(/^\uFEFF/, '');
   const rows = [];
   let i = 0, field = '', inQ = false, row = [];
   const push = () => { row.push(field); field=''; };
@@ -33,10 +35,14 @@ export function parseCSV(text) {
       if (c === '"') { inQ = true; }
       else if (c === ',') { push(); }
       else if (c === '\n') { push(); endRow(); }
-      else if (c === '\r') { /* ignore */ }
+      else if (c === '\r') {
+        if (text[i] === '\n') i++;
+        push(); endRow();
+      }
       else { field += c; }
     }
   }
+  if (inQ) throw new Error('CSVの引用符が閉じられていません');
   push();
   if (row.length > 1 || row[0] !== '') endRow();
   return rows;
@@ -53,7 +59,7 @@ export async function handleCsvGenerate({ file, currentBgUrl, buildUrl }) {
 
   if (!rows.length) {
     showToast('CSVにデータがありません');
-    return;
+    return { ok: 0, ng: 0 };
   }
 
   let ok = 0, ng = 0;
@@ -98,6 +104,7 @@ export async function handleCsvGenerate({ file, currentBgUrl, buildUrl }) {
 
     try {
       const id  = await hashIdShort(A, C, 12);
+      markCreatedCard(id);   // 自分で確認のために開いても受取人の開封と区別できるように
       const url = buildUrl(dataObj, id);
       const newRow = row.slice();
       newRow[6] = url;       // 列GにURL
@@ -124,4 +131,5 @@ export async function handleCsvGenerate({ file, currentBgUrl, buildUrl }) {
   }, 800);
 
   showToast(`CSV生成：成功 ${ok} 行 / 失敗 ${ng} 行（URLは列Gに追記）`);
+  return { ok, ng };
 }

@@ -660,10 +660,29 @@ button.small{ padding: 4px 10px; font-size: 12px; border-radius: 8px; }
 .samebox{ min-height: 6.5em; line-height: 1.5; resize: vertical; }
 
 
-html.editing-open, body.editing-open{ overflow: auto !important; overscroll-behavior: contain; height: 100dvh; }
+html.editing-open,
+body.editing-open{
+  width: 100%;
+  height: 100dvh;
+  overflow: hidden !important;
+  overscroll-behavior: none;
+}
+body.editing-open{
+  position: fixed;
+  inset: 0;
+}
 html.editing-open #gyro-btn{ opacity: 0; pointer-events: none; }
 
-#editor-overlay, .editor-panel, .editor-body{ -webkit-overflow-scrolling: touch; touch-action: auto; }
+#editor-overlay{
+  height: 100dvh;
+  overflow: hidden;
+}
+.editor-panel,
+.editor-body{
+  min-height: 0;
+  -webkit-overflow-scrolling: touch;
+  touch-action: auto;
+}
 
 
 #btn-copy{ padding-inline: 18px; white-space: nowrap; letter-spacing: .02em; flex: 0 0 auto; }

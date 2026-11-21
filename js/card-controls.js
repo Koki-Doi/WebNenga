@@ -40,10 +40,11 @@ export function initCardControls({ container, card, isEditorOpen }) {
 
   const scrollers = ['Space', 'PageUp', 'PageDown', 'ArrowUp', 'ArrowDown', 'Home', 'End'];
   const handleKeyDown = (e) => {
-    if (isEditorOpen()) return;
-    if (e.code === 'Enter' || e.code === 'NumpadEnter') {
+    if (isEditorOpen() || document.getElementById('gacha-overlay')?.classList.contains('show')) return;
+    if (e.target !== document.body && !container.contains(e.target)) return;
+    if (e.code === 'Enter' || e.code === 'NumpadEnter' || e.code === 'Space') {
       e.preventDefault();
-      toggle();
+      container.click();
     } else if (scrollers.includes(e.code)) {
       e.preventDefault();
     }

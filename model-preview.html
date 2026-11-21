@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>模型室 — Web年賀状 2027</title>
+  <link rel="stylesheet" href="model-preview.css?v=20260926">
+  <script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/"}}</script>
+</head>
+<body>
+  <header><a href="./index.html">Web年賀状 <span>2027</span></a><span>MODEL STUDY / 模型室</span></header>
+  <main>
+    <section class="viewport" aria-label="3Dモデルプレビュー">
+      <canvas id="model-canvas" aria-label="ドラッグで回転、ホイールで拡大できる3Dモデル"></canvas>
+      <div class="caption"><span id="scene-number">01 / 10</span><h1 id="scene-title">迎春の扇</h1><p id="scene-description">折り目、親骨、要。光と角度で確かめる。</p></div>
+      <p class="hint">ドラッグで回転 · ホイール / ピンチで拡大</p>
+    </section>
+    <aside>
+      <p class="eyebrow">THE COLLECTION</p><h2>かたちを、じっくり。</h2>
+      <p class="intro">年賀状を彩る小さな舞台。演出を止めて、ひとつずつ眺める模型室です。</p>
+      <nav aria-label="モデル選択">
+        <button data-scene="fan" aria-pressed="true"><span>01</span>迎春の扇 <small>FOLD & PAPER</small></button>
+        <button data-scene="corridor" aria-pressed="false"><span>02</span>迎賓の扉 <small>WOOD & BRASS</small></button>
+        <button data-scene="race" aria-pressed="false"><span>03</span>スタートゲート <small>FRAME & LIGHT</small></button>
+        <button data-scene="crowd" aria-pressed="false"><span>04</span>スタンドの歓声 <small>GRANDSTAND</small></button>
+        <button data-scene="course" aria-pressed="false"><span>05</span>空へひらくコース <small>COURSE & SKY</small></button>
+        <button data-scene="card" aria-pressed="false"><span>06</span>一枚の年賀状 <small>FRONT & BACK</small></button>
+        <button data-scene="sequence" aria-pressed="false"><span>07</span>カメラ演出 <small>MOTION & LIGHT</small></button>
+        <button data-scene="dash" aria-pressed="false"><span>08</span>扉への疾走 <small>CHASE & DISTANCE</small></button>
+        <button data-scene="gatePan" aria-pressed="false"><span>09</span>ゲート横移動 <small>DETAIL & RHYTHM</small></button>
+        <button data-scene="lamp" aria-pressed="false"><span>10</span>発走灯 <small>START SIGNAL</small></button>
+      </nav>
+      <div class="controls">
+        <div id="travel-controls" hidden>
+          <label for="travel">カメラの進行 <output id="travel-value">100%</output></label>
+          <input id="travel" type="range" step="0.1" min="0" max="100" value="100">
+        </div>
+        <button id="play-sequence" class="reset" hidden>演出を再生 ▶</button>
+        <label for="opening">扉の開き <output id="opening-value">0%</output></label>
+        <input id="opening" type="range" min="0" max="100" value="0" disabled>
+        <label class="check"><input id="wireframe" type="checkbox">ワイヤーフレーム</label>
+        <label class="check"><input id="portrait" type="checkbox" checked>演出と同じ縦画角（9:16）</label>
+        <button id="reset-view" class="reset">視点をリセット ↗</button>
+      </div>
+      <p id="model-status" role="status">モデルを読み込んでいます…</p>
+      <a class="back" href="./index.html">年賀状に戻る →</a>
+    </aside>
+  </main>
+  <script type="module" src="js/gacha/model-preview.js"></script>
+</body>
+</html>

@@ -55,17 +55,15 @@
       font-family:${cs.fontFamily}; font-weight:${cs.fontWeight};
       font-size:${fontPx}px; line-height:${cs.lineHeight};
     `;
-    document.body.appendChild(probe);
-
-    let max = 0;
+    // Build all lines before reading layout, avoiding one layout flush per line.
     for (const line of lines) {
-      const span = document.createElement('span');
+      const span = document.createElement('div');
       span.textContent = line.length ? line : '　';
-      probe.innerHTML = '';
       probe.appendChild(span);
-      const w = Math.ceil(span.getBoundingClientRect().width);
-      if (w > max) max = w;
     }
+    probe.style.width = 'max-content';
+    document.body.appendChild(probe);
+    const max = Math.ceil(probe.getBoundingClientRect().width);
     document.body.removeChild(probe);
     return max;
   }

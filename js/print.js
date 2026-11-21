@@ -1,3 +1,5 @@
+import { escapeHtml } from './utils.js';
+import { trackPage } from './card-analytics.js';
 // js/print.js
 // カードを画像化して印刷する（裏面=挨拶面、表面=宛名面）
 const GREETING_SELECTOR = '.greeting-side';
@@ -7,7 +9,10 @@ const ADDRESS_HIDE_SELECTORS = ['.stamp', '.postal-code', '.tap-hint', '.tap-hin
 let html2canvasLoader = null;
 function loadHtml2Canvas() {
   if (!html2canvasLoader) {
-    html2canvasLoader = import('./html2canvas.esm.js').then((mod) => mod.default || mod);
+    html2canvasLoader = import('./html2canvas.esm.js').then((mod) => mod.default || mod).catch((error) => {
+      html2canvasLoader = null;
+      throw error;
+    });
   }
   return html2canvasLoader;
 }
@@ -84,7 +89,7 @@ function verticalizeElements(selectors) {
         lines.push('&nbsp;');
         lines.push('&nbsp;'); // 空行
       } else {
-        lines.push(c);
+        lines.push(escapeHtml(c));
       }
     });
     const prevStyle = {
@@ -114,6 +119,8 @@ function verticalizeElements(selectors) {
 
 async function captureElement(el, { hideSelectors = [], beforeCapture, width, height, scale } = {}) {
   if (!el) throw new Error('印刷対象のカードが見つかりません');
+  // ライブラリの読込失敗時にカードをキャプチャ用表示のまま残さない。
+  const html2canvas = await loadHtml2Canvas();
 
   const root = document.documentElement;
   const addedSnapshotClass = !root.classList.contains('h2c-snapshot');
@@ -122,7 +129,6 @@ async function captureElement(el, { hideSelectors = [], beforeCapture, width, he
   const restoreHide = hideSelectors.length ? hideTemporarily(hideSelectors) : () => {};
   const restoreBefore = beforeCapture ? beforeCapture() : () => {};
 
-  const html2canvas = await loadHtml2Canvas();
   // 既定はハガキ実寸（100x148mm相当）で固定キャプチャし、印刷時の余白をなくす
   const targetWidth = width ?? 600;
   const targetHeight = height ?? 888; // 600 * 1.48
@@ -212,9 +218,10 @@ async function printAsImage(popup) {
 export async function captureCardFaces() {
   const greetingEl = document.querySelector(GREETING_SELECTOR);
   const addressEl = document.querySelector(ADDRESS_SELECTOR);
-  const rect = document.getElementById('card')?.getBoundingClientRect();
-  const w = Math.round(rect?.width || 600);
-  const h = Math.round(rect?.height || w * 1.48);
+  const card = document.getElementById('card');
+  // 傾き・反転中の見かけの矩形ではなく、元のレイアウト寸法を使う。
+  const w = card?.offsetWidth || 600;
+  const h = card?.offsetHeight || Math.round(w * 1.48);
   const scale = Math.min(4, Math.max(1.2, 1100 / h));
   const back = await captureElement(greetingEl, { width: w, height: h, scale });
   const front = await captureElement(addressEl, {
@@ -232,13 +239,17 @@ export function initPrint() {
   btn.addEventListener('click', () => {
     const popup = window.open('', '_blank');
     if (!popup) {
+      trackPage('print_card', { result: 'popup_blocked' });
       alert('ポップアップがブロックされています。許可してください。');
       return;
     }
     popup.document.write('<!doctype html><title>Generating…</title><body style="margin:0;display:flex;align-items:center;justify-content:center;font-family:sans-serif;">生成中…</body>');
     popup.document.close();
 
-    printAsImage(popup).catch((err) => {
+    printAsImage(popup).then(() => {
+      trackPage('print_card', { result: 'opened' });
+    }).catch((err) => {
+      trackPage('print_card', { result: 'failed' });
       console.error('印刷用画像の生成に失敗しました', err);
       try { popup.close(); } catch (_) {}
       alert('印刷用画像の生成に失敗しました。ポップアップの許可やネットワーク状態をご確認ください。');

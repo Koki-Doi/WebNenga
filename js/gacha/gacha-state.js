@@ -4,9 +4,14 @@ export const state = {
   bloom: 0.35,         // 毎フレーム composer に反映
   after: 0,            // AfterimagePass damp (0=off)
   radial: 0,           // RadialBlur strength
+  whiteout: 0,         // 光源から画面へ広がる白光 (0–1)
   shake: 0,            // カメラ揺れ強度
   frame: null,         // フェーズごとの毎フレームフック (dt, t) => {}
   muted: false,
+  // 計測用: セリフをタップで送った回数/自動で進んだ回数、結果画面の終わり方(tap/timeout)
+  speechTaps: 0,
+  speechAuto: 0,
+  revealExit: null,
 };
 
 // 単発の年賀状ガチャ: 排出はゲート10番の★3（虹）で確定。
@@ -22,6 +27,6 @@ export const GACHA = {
     pv: 1, mbg: 1,
   },
   speechLines: [
-    '明けましておめでとう',
+    '新年あけまして\nおめでとうございます！',
   ],
 };
