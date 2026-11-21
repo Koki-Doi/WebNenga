@@ -23,7 +23,10 @@ export function buildStandAudience(tier) {
     const i = row * columns + col;
     const t = (row + .45) / rows;
     const variation = ((i * 73 + row * 11) % 101) / 101;
-    const x = -106 + col * .665 + (row % 2) * .26;
+    // 列を等間隔に並べると、速い横移動のときに模様が止まって（または逆流して）見える。
+    // 一人ずつ左右へずらして周期をなくす
+    const scatter = (((i * 37 + row * 53) % 89) / 89 - .5) * .42;
+    const x = -106 + col * .665 + (row % 2) * .26 + scatter;
     const y = tier.baseY + rise * t + .035;
     const z = tier.frontZ - run * t;
     const scale = .83 + variation * .24;

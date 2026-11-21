@@ -55,8 +55,9 @@ function buildOverlay() {
           <div class="gc-tap-hint">TAP ▼</div>
         </div>
         <div id="gc-reveal-ui" class="gc-ov">
-          <div class="gc-rv-new">NEW!</div>
+          <div class="gc-rv-fx"></div>
           <div class="gc-rv-bottom">
+            <div class="gc-rv-new">NEW!</div>
             <div class="gc-rv-items">
               <span class="gc-omake">おまけ</span>
               <i class="gc-qi-shoe"></i><b>×2027</b>
@@ -82,6 +83,10 @@ function buildOverlay() {
 
 // ---------- エンジン初期化（three/gsap を遅延ロード） ----------
 async function initEngine(cardData) {
+  // フォントは待たずに取りに行く（モジュールの取得やワールド構築と並行させ、ロードを直列に伸ばさない）
+  const DIGITS = ['700 40px "Noto Sans JP"', '0123456789'];
+  const digitFont = document.fonts.load(...DIGITS).catch(() => { });
+  document.fonts.load('200px "Yuji Boku"', '激熱ッ!!').catch(() => { });
   const [{ gsap }, world, phasesMod, uiMod] = await Promise.all([
     import('gsap'),
     import('./gacha-world.js'),
@@ -94,13 +99,30 @@ async function initEngine(cardData) {
   const overlay = buildOverlay();
   const stageEl = overlay.querySelector('#gc-stage');
   const { W } = world;
+  // ゲートの番号札は canvas に描く。数字のフォントが間に合っていなければ、届いた時点で描き直す
+  const digitsReady = document.fonts.check(...DIGITS);
   world.initWorld(overlay.querySelector('#gc-three'));
-  // フォント先読み（扇面の筆文字テクスチャ用に Yuji Boku を確実に）
-  try { await document.fonts.load('700 40px "Noto Sans JP"', '謹賀新年'); } catch (e) { }
-  await Promise.all([
-    world.buildHagaki(GACHA.card),
-    world.buildFan3D(),
-  ]);
+  if (!digitsReady) digitFont.then(() => world.repaintGatePlates());
+  // オーバーレイを初めて表示するときの文字組み（丸ゴシックの初回処理）は数十msかかる。
+  // タップ後に払うと開演が遅れるので、見えない状態で一度だけレイアウトさせて先に済ませる。
+  // （確定画面の文字は開演時には不要なので、セリフ画面の間に UI.prelayout で別途済ませる）
+  overlay.style.visibility = 'hidden';
+  overlay.classList.add('show');
+  void overlay.offsetWidth;
+  overlay.classList.remove('show');
+  overlay.style.visibility = '';
+  world.buildHagaki(GACHA.card);
+  await world.buildFan3D();
+  // 初回描画でまとめて走るシェーダのコンパイルとテクスチャ転送を、開演前に済ませる。
+  // 廊下（扇子カット）とポストプロセスはここで待ち、コースと確定画面のぶんは裏で続ける
+  await world.prewarm('corridor', { passes: true });
+  // 読み込み直後にタップされた場合でも扇子カット(0.7秒)に重ならないよう、少し置いてから始める。
+  // コースが映るのは開演の約4秒後なので、廊下を飛んでいる間に空き時間で終わる
+  setTimeout(() => {
+    world.prewarm('race', { polite: true })
+      .then(() => world.prewarm('reveal', { polite: true }))
+      .catch((e) => console.warn('[gacha] prewarm', e));
+  }, 900);
 
   // ---- キャンセルトークン / ランナー（gacha-demo main.js と同型） ----
   const PHASES = phasesMod.makePhases();
@@ -152,6 +174,11 @@ async function initEngine(cardData) {
   }
   let doneResolver = null;
   let trackGacha = () => {};
+  const reportCaptureError = (e) => {
+    console.warn('[gacha] face capture failed', e);
+    trackGacha('gacha_error', { error_code: 'capture_failed', error_message: String(e?.message ?? e) });
+  };
+  world.onCardCaptureError(reportCaptureError);
   let skipped = false;
   let phaseFailed = false;
   async function runFrom(idx) {
@@ -199,7 +226,7 @@ async function initEngine(cardData) {
     W.revealSpark?.update(dt, t);
     for (const p of W.penlights ?? []) p.update(dt, t);
     world.applyCamera(t);
-    world.updateWorldFx();
+    world.updateWorldFx(dt, t);
     W.composer?.render();
   }
   function tick(now) {
@@ -271,18 +298,17 @@ async function initEngine(cardData) {
         });
         overlay.classList.add('show');
         overlay.focus({ preventScroll: true });
+        // 宛名面は画面の実レイアウトを測ってその場で描く（数ms。オーバーレイの裏で行う）。
+        // 挨拶面の撮影(html2canvas)は重く、開演直後に走らせると扇子カットが止まるため、
+        // 3Dの動きが無いセリフ画面まで遅らせる（gacha-phases の speech / reveal が呼ぶ）
+        world.resetCardCapture();
+        try { await world.refreshHagakiFront(); } catch (e) { reportCaptureError(e); }
         startLoop();
         uiMod.SFX.init();
         uiMod.SFX.ctx?.resume?.().catch(() => {});
         uiMod.SFX.ding();
         uiMod.SFX.bgmStart();
         const done = new Promise((res) => { doneResolver = res; });
-        // 実カードDOMをそのままテクスチャ化（扇子カットの裏で並行して完了する。
-        // ハガキ初登場は dash なので待たずに開演してよい）
-        world.refreshHagakiTextures().catch((e) => {
-          console.warn('[gacha] face capture failed', e);
-          trackGacha('gacha_error', { error_code: 'capture_failed', error_message: String(e?.message ?? e) });
-        });
         // タップ直後は虹バースト等を挟まず、即「激熱ッ！」へ
         runFrom(DEBUG_PHASE ? Math.max(0, PHASES.findIndex((p) => p.name === DEBUG_PHASE)) : 0);
         await done;
@@ -339,6 +365,13 @@ window.addEventListener('DOMContentLoaded', () => {
 
   // 共有リンク経由の閲覧時だけ、演出を裏で先読みしておく（タップ即開演のため）
   if (cardData && !qs.has('nogacha')) {
+    // モジュール一式（three.js を含む依存ごと）の取得は、アイドルを待たずページ読み込みと並行で始める
+    for (const href of ['./js/gacha/gacha-world.js', './js/gacha/gacha-phases.js', './js/gacha/gacha-ui.js']) {
+      const link = document.createElement('link');
+      link.rel = 'modulepreload';
+      link.href = new URL(href, document.baseURI).href;
+      document.head.appendChild(link);
+    }
     const warmup = () => { ensureEngine(cardData).catch(() => { }); };
     if ('requestIdleCallback' in window) requestIdleCallback(warmup, { timeout: 4000 });
     else setTimeout(warmup, 1200);

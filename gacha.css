@@ -23,16 +23,47 @@
 #gc-ui { position: absolute; inset: 0; pointer-events: none; }
 #gc-ui .gc-ov { position: absolute; inset: 0; opacity: 0; visibility: hidden; }
 #gc-ui .gc-ov.show { opacity: 1; visibility: visible; }
+/* 出番前の層はレイアウトもしない（確定画面の文字組みは重く、開演時に払うと最初の表示が遅れる） */
+#gc-ui .gc-ov:not(.show) { display: none; }
 
-/* ============ セリフ画面 ============ */
+/* ============ セリフ画面（参考 movie/frames 0730–0800） ============ */
 #gc-speech {
   background:
-    radial-gradient(ellipse at 18% 6%, rgba(250, 255, 180, .75) 0%, transparent 50%),
-    radial-gradient(ellipse at 85% 94%, rgba(255, 170, 220, .65) 0%, transparent 55%),
-    linear-gradient(165deg, #d8f0a0 0%, #b4ecc4 20%, #96e4de 42%, #9cc8f0 62%, #c2aeec 80%, #f2aada 100%);
+    radial-gradient(ellipse at 14% 4%, rgba(246, 255, 150, .85) 0%, transparent 46%),
+    radial-gradient(ellipse at 88% 96%, rgba(255, 140, 214, .75) 0%, transparent 52%),
+    linear-gradient(168deg, #c9f27c 0%, #8eecb4 18%, #7fe0de 38%, #93bdf5 56%, #c39cf2 76%, #f58ad6 100%);
   display: flex; align-items: center; justify-content: center;
+  overflow: hidden;
 }
-#gc-speech-stars { position: absolute; inset: 0; overflow: hidden; }
+/* 文字の周りを横切る白い光の帯 */
+#gc-speech::before {
+  content: '';
+  position: absolute; inset: 0;
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 90 160' preserveAspectRatio='none'%3E%3Cdefs%3E%3Cfilter id='b' x='-20%25' y='-20%25' width='140%25' height='140%25'%3E%3CfeGaussianBlur stdDeviation='1.1'/%3E%3C/filter%3E%3C/defs%3E%3Cg fill='white' filter='url(%23b)'%3E%3Cpath fill-opacity='.34' d='M-6 68C18 52 54 56 96 77L96 85C54 66 18 63-6 80Z'/%3E%3Cpath fill-opacity='.26' d='M-6 95C24 103 60 98 96 84L96 90C60 107 24 110-6 102Z'/%3E%3Cpath fill-opacity='.16' d='M-6 58C28 66 58 80 96 70L96 73C58 85 28 71-6 62Z'/%3E%3C/g%3E%3C/svg%3E") center / 100% 100% no-repeat;
+  animation: gcRibbonDrift 5s ease-in-out infinite alternate;
+}
+/* 大きく透けたしゃぼん玉 */
+#gc-speech::after {
+  content: '';
+  position: absolute; inset: -4%;
+  --bub: rgba(255, 255, 255, .07) 0%, rgba(255, 255, 255, .13) 86%, rgba(255, 255, 255, .36) 97%, rgba(255, 255, 255, 0) 100%;
+  background:
+    radial-gradient(circle calc(var(--gsu) * 15) at 10% 86%, var(--bub)),
+    radial-gradient(circle calc(var(--gsu) * 10) at 90% 66%, var(--bub)),
+    radial-gradient(circle calc(var(--gsu) * 12) at 60% 8%, var(--bub)),
+    radial-gradient(circle calc(var(--gsu) * 6) at 20% 30%, var(--bub)),
+    radial-gradient(circle calc(var(--gsu) * 8) at 78% 92%, var(--bub));
+  animation: gcBubbleFloat 6s ease-in-out infinite alternate;
+}
+@keyframes gcRibbonDrift {
+  from { transform: translateY(calc(var(--gsu) * -.8)) scaleY(1); }
+  to { transform: translateY(calc(var(--gsu) * .8)) scaleY(1.06); }
+}
+@keyframes gcBubbleFloat {
+  from { transform: translate(0, calc(var(--gsu) * 1.2)); }
+  to { transform: translate(calc(var(--gsu) * .8), calc(var(--gsu) * -1.4)); }
+}
+#gc-speech-stars { position: absolute; inset: 0; overflow: hidden; z-index: 1; }
 #gc-speech-stars i {
   position: absolute; font-style: normal;
   animation: gcStarFloat 3.4s ease-in-out infinite;
@@ -48,17 +79,33 @@
   50% { transform: translateY(calc(var(--gsu) * -2.4)) rotate(8deg) scale(1.12); }
 }
 #gc-speech-box {
-  position: relative;
-  width: 84%;
+  position: relative; z-index: 2;
+  width: 88%;
   text-align: center;
-  overflow: hidden;
+}
+/* 文字が現れる直前、中央で白い光がふくらんで消える（参考0730） */
+#gc-speech-box::before {
+  content: '';
+  position: absolute; left: 50%; top: 50%;
+  width: calc(var(--gsu) * 46); height: calc(var(--gsu) * 22);
+  margin: calc(var(--gsu) * -11) 0 0 calc(var(--gsu) * -23);
+  background: radial-gradient(ellipse at center, rgba(255, 255, 255, .95) 0%, rgba(255, 255, 255, .5) 38%, rgba(255, 255, 255, 0) 70%);
+  opacity: 0; pointer-events: none;
+}
+#gc-speech-box.is-entering::before { animation: gcSpeechBurst .7s ease-out both; }
+@keyframes gcSpeechBurst {
+  0% { opacity: 0; transform: scale(.25, .2); }
+  28% { opacity: 1; transform: scale(1, .9); }
+  100% { opacity: 0; transform: scale(1.5, 1.25); }
 }
 #gc-speech-text {
+  position: relative;
   font-weight: 900;
-  font-size: calc(var(--gsu) * 3.1);
-  line-height: 1.9;
+  font-size: calc(var(--gsu) * 3.35);
+  line-height: 1.62;
+  letter-spacing: .02em;
   color: #ffffff;
-  -webkit-text-stroke: calc(var(--gsu) * 0.7) #ff8ec6;
+  -webkit-text-stroke: calc(var(--gsu) * 0.72) #ff7fc4;
   paint-order: stroke fill;
   text-shadow:
     0 calc(var(--gsu) * -0.5) calc(var(--gsu) * 1.6) rgba(150, 240, 190, .75),
@@ -71,11 +118,13 @@
   opacity: 1;
   transform-origin: 50% 65%;
 }
+/* 2行目は縁取りを青緑へ寄せ、原作の左右で色が移る縁を再現する */
+.gc-speech-line:nth-child(2) { -webkit-text-stroke-color: #62c9d6; }
 #gc-speech-box.is-entering .gc-speech-line {
-  animation: gcSpeechLineIn .56s cubic-bezier(.16,.78,.28,1.18) both;
+  animation: gcSpeechLineIn .56s cubic-bezier(.16,.78,.28,1.18) .16s both;
 }
 #gc-speech-box.is-entering .gc-speech-line:nth-child(2) {
-  animation-delay: .07s;
+  animation-delay: .24s;
 }
 @keyframes gcSpeechLineIn {
   0% {
@@ -92,12 +141,14 @@
   }
 }
 @media (prefers-reduced-motion: reduce) {
-  #gc-speech-box.is-entering .gc-speech-line {
+  #gc-speech-box.is-entering .gc-speech-line,
+  #gc-speech-box.is-entering::before,
+  #gc-speech::before, #gc-speech::after {
     animation: none;
   }
 }
 .gc-tap-hint {
-  position: absolute; bottom: 4.5%; left: 0; right: 0;
+  position: absolute; bottom: 4.5%; left: 0; right: 0; z-index: 3;
   text-align: center; color: rgba(255, 255, 255, .92);
   font-weight: 800; font-size: calc(var(--gsu) * 1.9);
   text-shadow: 0 1px 4px rgba(120, 80, 140, .6);
@@ -105,25 +156,56 @@
 }
 @keyframes gcTapBlink { 0%, 100% { opacity: .25; } 50% { opacity: 1; } }
 
-/* ============ SSR確定 UI ============ */
+/* ============ SSR確定 UI（参考 movie/frames 0906–0926: 斜めの虹帯・右下の星・左上のNEW!） ============ */
 #gc-reveal-ui { overflow: hidden; }
-.gc-rv-new {
-  position: absolute; top: 12%; left: 8%;
-  background: linear-gradient(160deg, #ffe071, #ffb627);
-  color: #fff; font-weight: 900; font-style: italic;
-  font-size: calc(var(--gsu) * 3);
-  padding: calc(var(--gsu) * 0.7) calc(var(--gsu) * 2);
-  border-radius: calc(var(--gsu) * 4);
-  transform: rotate(-12deg) scale(0);
-  box-shadow: 0 0 calc(var(--gsu) * 2.4) rgba(255, 200, 60, .9);
-  text-shadow: 0 2px 0 rgba(200, 120, 0, .5);
+/* 余白で瞬くきらめきとしゃぼん玉（カード面には重ねない） */
+.gc-rv-fx { position: absolute; inset: 0; }
+.gc-rv-fx i {
+  position: absolute; display: block;
+  width: calc(var(--gsu) * var(--s, 3)); height: calc(var(--gsu) * var(--s, 3));
+  margin: calc(var(--gsu) * var(--s, 3) / -2) 0 0 calc(var(--gsu) * var(--s, 3) / -2);
 }
-.gc-rv-bottom { position: absolute; left: 0; right: 0; bottom: 5.5%; text-align: center; }
+.gc-rv-fx i.sp {
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='white' d='M12 0C12.6 8 16 11.4 24 12C16 12.6 12.6 16 12 24C11.4 16 8 12.6 0 12C8 11.4 11.4 8 12 0Z'/%3E%3C/svg%3E") center / contain no-repeat;
+  filter: drop-shadow(0 0 calc(var(--gsu) * .6) rgba(255, 255, 255, .95));
+  animation: gcTwinkle 1.7s ease-in-out infinite;
+}
+.gc-rv-fx i.bb {
+  border-radius: 50%;
+  background: radial-gradient(circle at 34% 30%, rgba(255, 255, 255, .5) 0%, rgba(255, 255, 255, .06) 30%, rgba(190, 240, 255, .1) 78%, rgba(255, 255, 255, .5) 94%, rgba(255, 255, 255, 0) 100%);
+  box-shadow: inset 0 0 calc(var(--gsu) * .8) rgba(255, 190, 240, .5), inset 0 0 calc(var(--gsu) * 1.6) rgba(170, 255, 220, .35);
+  animation: gcBubbleRise 5.5s ease-in-out infinite alternate;
+}
+@keyframes gcTwinkle {
+  0%, 100% { transform: scale(.25) rotate(0deg); opacity: .15; }
+  50% { transform: scale(1) rotate(45deg); opacity: 1; }
+}
+@keyframes gcBubbleRise {
+  from { transform: translateY(calc(var(--gsu) * 1)); }
+  to { transform: translateY(calc(var(--gsu) * -1.6)); }
+}
+.gc-rv-bottom { position: absolute; left: 0; right: 0; bottom: 5.2%; text-align: center; }
+.gc-rv-new {
+  position: absolute; left: 4.5%; top: calc(var(--gsu) * -1.1); z-index: 3;
+  font-weight: 900; font-style: italic;
+  font-size: calc(var(--gsu) * 3.9);
+  letter-spacing: .02em;
+  color: #fff;
+  background: linear-gradient(#ffffff 30%, #ffd2ee 100%);
+  -webkit-background-clip: text; background-clip: text;
+  -webkit-text-fill-color: transparent;
+  -webkit-text-stroke: calc(var(--gsu) * 0.16) #ff4fb4;
+  filter:
+    drop-shadow(0 calc(var(--gsu) * .28) 0 #d81f8c)
+    drop-shadow(0 0 calc(var(--gsu) * .9) rgba(255, 120, 210, .9));
+  transform: rotate(-9deg) scale(0);
+  transform-origin: 20% 80%;
+}
 .gc-rv-items {
   display: flex; align-items: center; justify-content: flex-end;
   gap: calc(var(--gsu) * 1.0);
-  padding-right: 8%;
-  margin-bottom: calc(var(--gsu) * 0.8);
+  padding-right: 6%;
+  margin-bottom: calc(var(--gsu) * 1.3);
 }
 .gc-rv-items b {
   color: #fff; font-weight: 900; font-style: italic;
@@ -149,52 +231,71 @@
   transform: rotate(-6deg);
   white-space: nowrap; flex-shrink: 0;
 }
+/* ★3の帯: 桃→紫→青→翠へ移る斜めのリボン。上下に金白の細線、表面に光沢 */
 .gc-rv-band {
   position: relative;
-  padding: calc(var(--gsu) * 1.0) 0 calc(var(--gsu) * 1.2);
-  background: linear-gradient(100deg,
-      transparent 0%, rgba(255, 200, 160, .45) 3%,
-      #ffd8a0 12%, #ffe8c0 32%, #f7b0d4 68%, #ff8ec4 88%,
-      rgba(255, 160, 200, .45) 97%, transparent 100%);
-  clip-path: polygon(0% 26%, 2.2% 0%, 98.2% 5%, 100% 30%, 98.8% 100%, 1.2% 95%);
-  transform: rotate(-1.6deg);
-  box-shadow: 0 calc(var(--gsu) * 0.5) calc(var(--gsu) * 2.2) rgba(160, 90, 120, .35);
+  margin: 0 -6%;
+  padding: calc(var(--gsu) * 1.15) 0 calc(var(--gsu) * 1.35);
+  background:
+    linear-gradient(rgba(255, 255, 255, .5), rgba(255, 255, 255, 0) 46%, rgba(40, 20, 90, .14) 100%),
+    linear-gradient(96deg, #ff5fd4 0%, #e268f2 20%, #a478ff 42%, #6a9eff 62%, #53d6d2 82%, #86efa2 100%);
+  border-top: calc(var(--gsu) * .3) solid #fff6c8;
+  border-bottom: calc(var(--gsu) * .3) solid #fff6c8;
+  transform: rotate(-4.5deg);
+  box-shadow:
+    0 calc(var(--gsu) * -.75) 0 calc(var(--gsu) * -.5) rgba(255, 255, 255, .85),
+    0 calc(var(--gsu) * .85) 0 calc(var(--gsu) * -.55) rgba(255, 255, 255, .85),
+    0 calc(var(--gsu) * 0.6) calc(var(--gsu) * 2.4) rgba(110, 60, 170, .45);
+  overflow: hidden;
 }
-.gc-rv-band::before {
+/* 帯が入った直後に走る光沢 */
+.gc-rv-band::after {
   content: '';
-  position: absolute; inset: calc(var(--gsu) * -0.55) 6%;
-  background: linear-gradient(100deg, transparent, rgba(255, 240, 210, .6) 30%, rgba(255, 255, 255, .85) 50%, rgba(255, 210, 235, .6) 70%, transparent);
-  filter: blur(calc(var(--gsu) * 0.6));
-  z-index: -1;
+  position: absolute; top: 0; bottom: 0; left: -40%; width: 30%;
+  background: linear-gradient(100deg, transparent, rgba(255, 255, 255, .85) 50%, transparent);
+  transform: skewX(-22deg);
+  opacity: 0;
+}
+#gc-reveal-ui.show .gc-rv-band::after { animation: gcBandShine 3.4s ease-in-out .5s infinite; }
+@keyframes gcBandShine {
+  0% { left: -40%; opacity: 0; }
+  6% { opacity: 1; }
+  26% { left: 115%; opacity: 1; }
+  27%, 100% { left: 115%; opacity: 0; }
 }
 .gc-rv-epithet {
-  color: #fff; font-weight: 800;
+  position: relative; z-index: 1;
+  color: #fff; font-weight: 800; font-style: italic;
   font-size: calc(var(--gsu) * 2.0);
-  -webkit-text-stroke: calc(var(--gsu) * 0.4) #c05a2a;
+  -webkit-text-stroke: calc(var(--gsu) * 0.42) #6b3fc0;
   paint-order: stroke fill;
-  text-shadow: 0 calc(var(--gsu) * 0.2) calc(var(--gsu) * 0.7) rgba(150, 70, 30, .55);
+  text-shadow: 0 calc(var(--gsu) * 0.2) calc(var(--gsu) * 0.7) rgba(60, 30, 120, .55);
 }
 .gc-rv-name {
-  font-weight: 900;
+  position: relative; z-index: 1;
+  font-weight: 900; font-style: italic;
   font-size: calc(var(--gsu) * 5.0);
   line-height: 1.15;
   color: #fff;
-  -webkit-text-stroke: calc(var(--gsu) * 0.55) #b8452a;
+  -webkit-text-stroke: calc(var(--gsu) * 0.55) #5a2fb0;
   paint-order: stroke fill;
-  text-shadow: 0 calc(var(--gsu) * 0.5) calc(var(--gsu) * 1.4) rgba(140, 50, 30, .5);
+  text-shadow: 0 calc(var(--gsu) * 0.45) 0 rgba(60, 25, 130, .55), 0 calc(var(--gsu) * 0.5) calc(var(--gsu) * 1.4) rgba(50, 20, 110, .5);
 }
+/* 星は帯の右下へ重ねる */
 .gc-rv-stars {
-  margin-top: calc(var(--gsu) * 0.7);
-  padding-left: 10%;
-  text-align: left;
-  font-size: calc(var(--gsu) * 6.2);
-  height: calc(var(--gsu) * 7);
+  position: relative; z-index: 2;
+  margin-top: calc(var(--gsu) * -2.6);
+  padding-right: 5%;
+  text-align: right;
+  font-size: calc(var(--gsu) * 6.4);
+  height: calc(var(--gsu) * 7.2);
 }
 .gc-rv-stars span {
-  display: inline-block; margin: 0 calc(var(--gsu) * -0.45);
+  display: inline-block; margin: 0 calc(var(--gsu) * -0.5);
   color: #ffd83d;
-  -webkit-text-stroke: calc(var(--gsu) * 0.3) #fff;
-  text-shadow: 0 0 calc(var(--gsu) * 1.8) rgba(255, 190, 40, .95), 0 calc(var(--gsu) * 0.35) 0 #c8860a;
+  -webkit-text-stroke: calc(var(--gsu) * 0.34) #8a5a08;
+  paint-order: stroke fill;
+  text-shadow: 0 0 calc(var(--gsu) * 1.8) rgba(255, 200, 60, .95), 0 calc(var(--gsu) * 0.3) 0 #b47a0a;
   transform: scale(0) rotate(-8deg);
 }
 

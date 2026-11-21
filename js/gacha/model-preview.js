@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { W, initWorld, setEnv, resetFx, setStartLamp, setGateCenterFlash, buildFan3D, buildHagaki } from './gacha-world.js';
-import { GACHA } from './gacha-state.js';
+import { GACHA, state } from './gacha-state.js';
 import { corridorChase } from './corridor-camera.js';
 import { crowdCamera, courseCamera, gateWideCamera, gatePassCamera, sampleRaceSequence, RACE_SEQUENCE_DURATION } from './race-layout.js';
 
@@ -12,7 +12,7 @@ const scenes = {
   fan: { number: '01', title: '迎春の扇', description: '折り目、親骨、要。光と角度で確かめる。', eye: [0, .12, 1.6], target: [0, .09, 0] },
   corridor: { number: '02', title: '迎賓の扉', description: '赤茶の鏡板と真鍮の取っ手。あたたかな光の廊下。', eye: [0, 2.7, -5], target: [0, 2.5, -13] },
   race: { number: '03', title: 'スタートゲート', description: '緑の鋳鉄、銀の格子。ゲートの向こうには青空。', camera: gateWideCamera, progress: 1 },
-  crowd: { number: '04', title: 'スタンドの歓声', description: 'コースの左に連なる観客席。白い庇と人々のシルエット。', camera: crowdCamera, progress: 1 },
+  crowd: { number: '04', title: 'スタンドの歓声', description: '観客席を正面から。右へ流れ、終わり際に走路へ振り向きはじめる。', camera: crowdCamera, progress: .5 },
   course: { number: '05', title: '空へひらくコース', description: '観客席から振り向いて、芝と空へ。視点のつながりを確認。', camera: courseCamera, progress: 1 },
   sequence: { number: '07', title: 'カメラと白い光', description: '観客席 → 旋回・加速 → 白光 → ゲート全景。実際の速度で再生。', camera: (p) => sampleRaceSequence(p * RACE_SEQUENCE_DURATION), progress: 0 },
   card: { number: '06', title: '一枚の年賀状', description: '表から裏へ。想いを届ける、一枚の紙。', eye: [.35, .25, 2.6], target: [0, 0, 0] },
@@ -20,8 +20,8 @@ const scenes = {
   gatePan: { number: '09', title: 'ゲートを横切る視線', description: '1番から10番まで、房の装飾と番号を追う。', camera: gatePassCamera, progress: .5 },
   lamp: { number: '10', title: '発走灯', description: '消灯から赤点灯へ。支柱とゲートの位置関係も確認。', camera: () => {
     const L = W.lampPos;
-    return { px: L.x - 1.15, py: L.y - .7, pz: L.z + 3.3,
-      lx: L.x, ly: L.y, lz: L.z - .6, fov: 40, roll: 0 };
+    return { px: L.x + .85, py: L.y - 1.45, pz: L.z + 2.9,
+      lx: L.x - .1, ly: L.y + .12, lz: L.z - .4, fov: 40, roll: 0 };
   }, progress: 0 },
 };
 
@@ -78,8 +78,11 @@ try {
       }
       if (current === 'lamp') setStartLamp(progress >= .5);
       if (current === 'gatePan') setGateCenterFlash(progress, performance.now() / 1000);
-      W.whiteoutPass.enabled = (cs.whiteout ?? 0) > 0;
-      W.whiteoutPass.uniforms.amount.value = cs.whiteout ?? 0;
+      // 本編と同じ: 画面全体の白(whiteout)と、空だけの白(skyWhite)
+      W.whiteoutPass.enabled = (cs.whiteout ?? 0) > 0 || (cs.skyWhite ?? 0) > 0;
+      W.whiteoutPass.uniforms.amount.value = 0;
+      W.whiteoutPass.uniforms.flatAmount.value = cs.whiteout ?? 0;
+      W.whiteoutPass.uniforms.sky.value = cs.skyWhite ?? 0;
       W.camera.position.set(cs.px, cs.py, cs.pz);
       W.camera.fov = cs.fov;
       W.camera.updateProjectionMatrix();
@@ -178,6 +181,11 @@ try {
       W.confetti.update(1 / 60, now);
       W.sparkles.update(1 / 60, now);
       for (const penlight of W.penlights) penlight.update(1 / 60, now);
+    }
+    if (current === 'gatePan') {
+      // 房が中央へ来たときの光の粒（本編は updateWorldFx が描く）
+      W.gateBursts.material.uniforms.uPx.value = canvas.height / (2 * Math.tan(W.camera.fov * Math.PI / 360));
+      W.gateBursts.update(1 / 60, performance.now() / 1000, state.burst);
     }
     if (current === 'sequence' || current === 'gatePan') W.composer.render();
     else W.renderer.render(W.scene, W.camera);

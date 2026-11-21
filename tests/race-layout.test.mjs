@@ -1,6 +1,14 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { crowdCamera, courseCamera, flashCamera, gateWideCamera, gateFlashAmount, REFERENCE_FRAMES, RACE_CAMERA_TIMING, GATE_PASS_TIMING, RACE_LAYOUT, sampleRaceSequence, RACE_SEQUENCE_DURATION } from '../js/gacha/race-layout.js';
+import {
+  crowdCamera, courseCamera, flashCamera, gateWideCamera, gateFlashAmount, REFERENCE_FRAMES, RACE_CAMERA_TIMING,
+  GATE_PASS_TIMING, RACE_LAYOUT, sampleRaceSequence, RACE_SEQUENCE_DURATION,
+  sweepCamera, entryWhite, skyWhite, whipAmount, zoomAmount, SWEEP_HORIZON,
+} from '../js/gacha/race-layout.js';
+
+// 走路(+Z)から観客席(+X)側へ測った向き。観客席に正対で90°、走路に正対で0°
+const yawOf = (pose) => Math.atan2(pose.lx - pose.px, pose.lz - pose.pz);
+const DEG = Math.PI / 180;
 
 test('観客席カットの終点とコースカットの始点が完全に連続する', () => {
   assert.deepEqual(courseCamera(0), crowdCamera(1));
@@ -32,27 +40,25 @@ test('白光までは固定されたゲートが常にカメラの背後にあ�
   }
 });
 
-test('観客席では高さと奥行きを固定し、右へ横移動しながら右へ旋回する', () => {
+test('観客席では高さと観客席までの距離を固定し、正面から右へ横移動して、終わり際に右へ振り向きはじめる', () => {
+  // 参考0113–0123: 庇が水平のまま左へ流れ（=正対のまま右へ横移動）、0120あたりから傾きはじめる
   const start = crowdCamera(0), end = crowdCamera(1);
-  assert.equal(start.pz, end.pz);
-  assert.equal(start.lz, end.lz);
-  assert.ok(end.px < start.px);
-  assert.ok(Math.atan2(end.lx - end.px, end.lz - end.pz)
-    < Math.atan2(start.lx - start.px, start.lz - start.pz));
+  assert.ok(Math.abs(yawOf(start) - 90 * DEG) < 1e-9, '観客席に正対して始まる');
+  assert.ok(start.fov < 30, '望遠で客席を画面いっぱいに捉える');
   for (let i = 0; i <= 100; i++) {
     const pose = crowdCamera(i / 100);
-    assert.equal(pose.py, start.py);
-    assert.equal(pose.ly, start.ly);
-    assert.equal(pose.pz, start.pz);
-    assert.equal(pose.lz, start.lz);
+    assert.equal(pose.py, start.py, '高さを保つ');
+    assert.equal(pose.px, start.px, '観客席までの距離を保つ');
     if (i === 0) continue;
     const prior = crowdCamera((i - 1) / 100);
-    assert.ok(pose.px < prior.px, '最後まで右への移動が続く');
-    assert.ok(Math.atan2(pose.lx - pose.px, pose.lz - pose.pz)
-      < Math.atan2(prior.lx - prior.px, prior.lz - prior.pz), '右への旋回が続く');
+    assert.ok(pose.pz > prior.pz, '最後まで右(+Z)への横移動が続く');
+    assert.ok(yawOf(pose) <= yawOf(prior) + 1e-12, '左へは振らない');
   }
-  assert.equal(courseCamera(0).pz, start.pz);
-  assert.ok(courseCamera(.5).pz > start.pz);
+  assert.ok(Math.abs(yawOf(crowdCamera(.5)) - 90 * DEG) < 1e-9, '前半は正対を保つ');
+  assert.ok(yawOf(end) < 75 * DEG && yawOf(end) > 30 * DEG, '終わり際には右へ振り向きはじめている');
+  const speed = (crowdCamera(.5).pz - crowdCamera(.4).pz) / (.1 * RACE_CAMERA_TIMING.crowd);
+  assert.ok(speed > 10, '客席が流れて見える速さで横移動する');
+  assert.ok(courseCamera(.5).pz > end.pz, '振り向いた後も進み続ける');
 });
 
 test('白光までの接続点で位置・向き・実時間の速度が連続する', () => {
@@ -68,28 +74,75 @@ test('白光までの接続点で位置・向き・実時間の速度が連続�
       assert.ok(Math.abs(v1 - v2) < .01, `${key}: ${v1} → ${v2}`);
     }
   }
-  assert.equal(crowdCamera(.5).pz, crowdCamera(0).pz);
+  assert.equal(crowdCamera(.5).px, crowdCamera(0).px);
 });
 
-test('旋回を先に終え、前進は加速し、全景は低速で見せる', () => {
+test('振り向きは0124–0126で最も速く、0129までに走路へ正対する', () => {
+  const at = (frame) => (frame - REFERENCE_FRAMES.crowd) / 10;
+  let peak = { seconds: 0, amount: 0 };
+  for (let seconds = 0; seconds <= 2.6; seconds += .005) {
+    const amount = whipAmount(seconds);
+    assert.ok(amount >= 0 && amount <= 1 + 1e-9);
+    if (amount > peak.amount) peak = { seconds, amount };
+  }
+  assert.ok(peak.amount > .99);
+  assert.ok(peak.seconds >= at(124) && peak.seconds <= at(126), `最速は ${peak.seconds.toFixed(2)}秒`);
+  assert.ok(yawOf(sweepCamera(at(120))) > 80 * DEG, '0120まではほぼ正対');
+  assert.ok(yawOf(sweepCamera(at(126))) < 30 * DEG, '0126には走路側を向いている');
+  assert.ok(Math.abs(yawOf(sweepCamera(at(129)))) < 2 * DEG, '0129で走路に正対');
+  assert.equal(whipAmount(at(118)), 0, '正対している間は横ブラーなし');
+  assert.equal(whipAmount(at(132)), 0, '走路を見通す間も横ブラーなし');
+  // 振り向きながら引いて、走路の目線まで降りる
+  const end = courseCamera(1);
+  assert.ok(end.fov > crowdCamera(0).fov + 20, '望遠から広角へ引く');
+  assert.ok(end.py < crowdCamera(0).py - 2, '走路の目線へ降りる');
+  assert.ok(end.px > crowdCamera(0).px, '観客席側へ寄り、左に観客席を大きく入れる');
+});
+
+test('振り向きを終えてから走路を緩やかに進み、白光へ向けて加速する。全景は低速で見せる', () => {
   for (const t of [.6, .8, 1]) {
     const pose = courseCamera(t);
     assert.ok(Math.abs(pose.lx - pose.px) < 1e-8, 'コースに正対');
     assert.equal(pose.roll, 0, '水平を維持');
   }
-  const velocity = (t) => (courseCamera(t + .001).pz - courseCamera(t).pz) / (.001 * RACE_CAMERA_TIMING.course);
-  assert.ok(velocity(.8) > velocity(.2) * 2, '直進時に加速');
+  const velocity = (camera, t, duration) => (camera(t + .001).pz - camera(t).pz) / (.001 * duration);
+  const truck = velocity(crowdCamera, .3, RACE_CAMERA_TIMING.crowd);
+  const hold = velocity(courseCamera, .75, RACE_CAMERA_TIMING.course);
+  const rush = velocity(flashCamera, .9, RACE_CAMERA_TIMING.flash);
+  assert.ok(hold > 0 && hold < 4, '走路を見通す間は緩やかに前進（参考0129–0134）');
+  assert.ok(truck > hold * 3, '観客席の横移動のほうがずっと速い');
+  assert.ok(rush > hold * 4, '白光へ向けて加速（参考0135–0137）');
+  assert.equal(zoomAmount(RACE_CAMERA_TIMING.crowd + RACE_CAMERA_TIMING.course * .7), 0, '加速の前は放射ブラーなし');
+  assert.ok(zoomAmount(RACE_CAMERA_TIMING.crowd + RACE_CAMERA_TIMING.course + RACE_CAMERA_TIMING.flash) > .99);
   const wideSpeed = (gateWideCamera(0).pz - gateWideCamera(1).pz) / RACE_CAMERA_TIMING.wide;
   assert.ok(wideSpeed < 2, '全景で余韻を取る');
 });
-test('カットは完全な白光の間に行い、全景が見えてから次へ進む', () => {
+
+test('扉からの白は画面全体が均一に引き、ゲート前の白光は空だけを覆う', () => {
+  assert.equal(entryWhite(0), 1);
+  assert.equal(entryWhite(RACE_CAMERA_TIMING.entryReveal), 0);
+  for (let s = .01; s <= 2.6; s += .01) assert.ok(entryWhite(s) <= entryWhite(s - .01), '白は戻らない');
+  assert.equal(skyWhite(RACE_CAMERA_TIMING.crowd + RACE_CAMERA_TIMING.course - .1), 0, '走路を見通す間は白くしない');
+});
+
+test('カットは空が完全に白い間に行い、芝は見せたままつなぐ。全景が見えてから次へ進む', () => {
   const cut = RACE_CAMERA_TIMING.crowd + RACE_CAMERA_TIMING.course + RACE_CAMERA_TIMING.flash;
   for (const time of [cut, cut + RACE_CAMERA_TIMING.hold / 2, cut + RACE_CAMERA_TIMING.hold]) {
-    assert.equal(sampleRaceSequence(time).whiteout, 1);
+    assert.equal(sampleRaceSequence(time).skyWhite, 1, '空は完全に白い');
+    assert.equal(sampleRaceSequence(time).whiteout, 0, '画面全体は白くしない（芝を残す。参考0135–0137）');
   }
   const revealEnd = cut + RACE_CAMERA_TIMING.hold + RACE_CAMERA_TIMING.reveal;
-  assert.ok(sampleRaceSequence(revealEnd + .0001).whiteout < .0001);
+  assert.ok(sampleRaceSequence(revealEnd + .0001).skyWhite < .0001);
   assert.ok(RACE_SEQUENCE_DURATION - revealEnd > 1, '白光が引いた後に全景を見る時間');
+  // 白の境目は、走路の地平線とゲート全景の芝の上端の両方に重なる（カットをまたいで芝がつながる）
+  const screenY = (pose, worldY, distance) => {
+    const pitch = Math.atan2(pose.ly - pose.py, Math.hypot(pose.lx - pose.px, pose.lz - pose.pz));
+    const below = Math.atan2(pose.py - worldY, distance) + pitch;
+    return .5 - .5 * Math.tan(below) / Math.tan(pose.fov * DEG / 2);
+  };
+  const course = flashCamera(1), wide = gateWideCamera(0);
+  assert.ok(Math.abs(screenY(course, 0, 1e6) - SWEEP_HORIZON) < .02, '走路の地平線');
+  assert.ok(Math.abs(screenY(wide, 0, wide.pz - RACE_LAYOUT.gateZ) - SWEEP_HORIZON) < .03, 'ゲートの足元');
 });
 
 test('10fpsで抽出した参考フレームの被写体と白光の時点に合う', () => {
@@ -100,9 +153,10 @@ test('10fpsで抽出した参考フレームの被写体と白光の時点に合
   assert.equal(at(120).shot, '観客席');
   assert.equal(at(128).shot, '旋回・加速');
   assert.equal(at(132).shot, '旋回・加速');
-  assert.equal(at(136).whiteout, 1);
+  assert.equal(at(136).skyWhite, 1);
   assert.equal(at(140).shot, 'ゲート全景');
-  assert.ok(at(140).whiteout < .2, 'ゲートを認識できる');
+  assert.ok(at(140).skyWhite < .2, 'ゲートを認識できる');
+  assert.equal(at(118).whiteout, 0, '0118には扉の白が引き切っている');
   assert.equal(at(124).shot, '旋回・加速');
   assert.equal(at(135).shot, '白光');
   assert.equal(at(138).shot, 'ゲート全景');
