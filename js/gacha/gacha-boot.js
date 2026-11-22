@@ -72,7 +72,6 @@ function buildOverlay() {
         </div>
         <div id="gc-flash" class="gc-ov"></div>
         <div id="gc-hud">
-          <button id="gc-mute" title="サウンド">🔊</button>
           <button id="gc-skip">SKIP ▶▶</button>
         </div>
       </div>
@@ -255,17 +254,8 @@ async function initEngine(cardData) {
     e.stopPropagation();
     skipped = true;
     trackGacha('gacha_skip', { phase: state.phase });
-    uiMod.SFX.whoosh(.25);
     jumpTo('reveal');
   });
-  overlay.querySelector('#gc-mute').addEventListener('click', (e) => {
-    e.stopPropagation();
-    state.muted = !state.muted;
-    uiMod.SFX.setMuted(state.muted);
-    e.currentTarget.textContent = state.muted ? '🔇' : '🔊';
-    trackGacha('gacha_mute', { muted: state.muted ? 'on' : 'off', phase: state.phase });
-  });
-
   return {
     overlay, state, W, jumpTo, runFrom, frame, world, ui: uiMod,
     setManual(v) {
@@ -304,10 +294,6 @@ async function initEngine(cardData) {
         world.resetCardCapture();
         try { await world.refreshHagakiFront(); } catch (e) { reportCaptureError(e); }
         startLoop();
-        uiMod.SFX.init();
-        uiMod.SFX.ctx?.resume?.().catch(() => {});
-        uiMod.SFX.ding();
-        uiMod.SFX.bgmStart();
         const done = new Promise((res) => { doneResolver = res; });
         // タップ直後は虹バースト等を挟まず、即「激熱ッ！」へ
         runFrom(DEBUG_PHASE ? Math.max(0, PHASES.findIndex((p) => p.name === DEBUG_PHASE)) : 0);
@@ -323,7 +309,6 @@ async function initEngine(cardData) {
       } finally {
         setActiveGacha(null);
         token?.cancel();
-        uiMod.SFX.bgmStop();
         stopLoop();
         await new Promise((res) => {
           overlay.style.transition = 'opacity .45s ease';

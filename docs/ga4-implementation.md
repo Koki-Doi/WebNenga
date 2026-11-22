@@ -48,7 +48,7 @@
 | `js_error` | `error_code=script_error/unhandled_rejection`。1ロード最大3件。`error_message` にError.messageまたは拒否理由・イベントのmessageを送信。スタック全体の専用送信はしない。`ui_context`（card/editor/gacha/none）付き。カードを開いていない時は氏名・本文なしのページイベントとして送る |
 | `gacha_start` | 再生開始。通常クリック経路は `wait_ms`・`preloaded`（yes/no）・`init_ms` 付き。端末性能 `dpr/cpu_cores/device_memory`（取得できる場合のみ） |
 | `gacha_skip` | SKIP時の `phase` |
-| `gacha_mute` | ミュート切替。`muted`（on/off）と `phase` |
+| `gacha_mute` | ミュート切替。`muted`（on/off）と `phase`。※2026-11-22 にガチャの音（BGM・効果音・🔊ボタン）を廃止したため現在は送られない（許可リストには残置） |
 | `gacha_complete` | `duration_sec` と `completion_reason=completed/skipped/error`。途中フェーズ例外があればerrorを優先。`avg_fps/min_fps`、`speech_taps/speech_auto`、結果画面まで進んだ場合は `reveal_exit`（tap/timeout） |
 | `gacha_error` | `error_code=gacha_failed/phase_failed/capture_failed` と `error_message`。フェーズ失敗の場合は `phase` も送る。capture_failedは実カード撮影の失敗で、演出は手描き表示のまま続く |
 

@@ -18,7 +18,6 @@ export const state = {
   cardShadow: 0,       // 年賀状の接地影の濃さ (0–1)
   flare: 0,            // レンズゴーストの強さ (0–1)
   whiteAt: [.58, .66], // 白光が広がる中心（画面UV）
-  muted: false,
   // 計測用: セリフをタップで送った回数/自動で進んだ回数、結果画面の終わり方(tap/timeout)
   speechTaps: 0,
   speechAuto: 0,

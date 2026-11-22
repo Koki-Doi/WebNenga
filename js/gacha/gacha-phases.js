@@ -6,7 +6,7 @@ import {
   setGateRevealed, setGatesRevealed, ensureHagakiBack,
   showHagaki, setHagakiSilhouette, resetHagakiPose,
 } from './gacha-world.js';
-import { UI, SFX } from './gacha-ui.js';
+import { UI } from './gacha-ui.js';
 import { corridorChase, CORRIDOR_TIMING } from './corridor-camera.js';
 import {
   sweepCamera, entryWhite, skyWhite, whipAmount, zoomAmount, SWEEP_HORIZON, SWEEP_VANISH, WHIP_TOWARD,
@@ -42,7 +42,6 @@ export function makePhases() {
     setEnv('corridor');
     state.bloom = 0;
     showHagaki(false);
-    SFX.whoosh(.4);
     setCam(0, 1.6, 2.4, 0, 2.7, -13, 48);
     const f = W.fan3d, fi = W.fan3dInner;
     f.visible = true;
@@ -54,7 +53,6 @@ export function makePhases() {
     await tk.tw(f.position, { y: 1.42, duration: .33, ease: 'back.out(1.4)' });
     if (tk.cancelled) return;
     // 見得切り: 起こしてから小刻みに扇ぐ。決めの瞬間だけ画面を小さく揺らす
-    SFX.thud(); SFX.sparkle(.05);
     state.shake = .012;
     tk.tw(state, { shake: 0, duration: .3 });
     tk.tw(fi.rotation, { z: -.07, duration: .22, ease: 'power2.out' });
@@ -79,8 +77,6 @@ export function makePhases() {
     // 絨毯に落ちる影と、後ろへこぼれるきらめきで「飛んでいる」ことを見せる
     state.cardShadow = .5;
     state.trail = 30;
-    SFX.whoosh(.8);
-    SFX.sparkle(.4, 1100);
     const pr = { progress: 0 };
     state.frame = (dt, t) => {
       const shot = corridorChase(pr.progress);
@@ -111,7 +107,6 @@ export function makePhases() {
     Object.assign(cs(), corridorChase(1).camera);
     state.frame = (dt, t) => { flutter(t, .55); };
     // 合わせ目の光が強まる（予兆）
-    SFX.swell(.8);
     tk.tw(W.doorShoe.material, { opacity: .5, duration: CORRIDOR_TIMING.doorApproach, ease: 'power2.in' });
     tk.tw(state, { bloom: .38, duration: CORRIDOR_TIMING.doorApproach });
     tk.tw(W.hagaki.position, { y: 2.2, duration: CORRIDOR_TIMING.doorApproach, ease: 'power1.in' });
@@ -125,8 +120,6 @@ export function makePhases() {
     if (tk.cancelled) return;
     // 扉が開く！（手前へ観音開き）
     const fx = W.doorFx;
-    SFX.clang();
-    SFX.whoosh(1.4, .1);
     tk.tw(W.doorShoe.material, { opacity: 0, duration: .14, delay: .06 });
     tk.tw(W.doorInner.material, { opacity: .8, duration: CORRIDOR_TIMING.doorOpen, ease: 'power2.in' });
     fx.slit.material.opacity = 1;
@@ -151,7 +144,6 @@ export function makePhases() {
     tk.tw(state, { whiteout: 1, duration: CORRIDOR_TIMING.doorOpen, ease: 'power2.in' });
     await tk.wait(CORRIDOR_TIMING.doorOpen);
     if (tk.cancelled) return;
-    SFX.sparkle(0, 1900);
     state.whiteout = 1;
     await tk.wait(CORRIDOR_TIMING.whiteHold);
   });
@@ -200,8 +192,6 @@ export function makePhases() {
   P('crowd', async (tk) => {
     sweepSetup();
     W.confetti.place({ x: 13, y: 8, z: 38 }, { x: 7, y: 6, z: 26 });
-    SFX.whoosh(1.4);
-    SFX.sparkle(.3, 1100);
     await sweepRun(tk, 0, CROWD_END);
   });
 
@@ -210,15 +200,12 @@ export function makePhases() {
     sweepSetup();
     // 紙吹雪の置き直しは、振り向きのブラーが最も強い瞬間に重なる
     W.confetti.place({ x: 2, y: 8, z: 62 }, { x: 20, y: 6, z: 34 });
-    SFX.whoosh(.8);
-    SFX.sparkle(.6, 900);
     await sweepRun(tk, CROWD_END, COURSE_END);
   });
 
   // 空が白く飛ぶ。芝は見せたまま前へ突っ込み、その芝の連続でゲート全景へ切り替える
   P('whiteflash', async (tk) => {
     sweepSetup();
-    SFX.ding();
     await sweepRun(tk, COURSE_END, CUT);
   });
 
@@ -245,7 +232,6 @@ export function makePhases() {
     state.blurAt = SWEEP_VANISH;
     state.radial = .1;
     tk.tw(state, { radial: 0, duration: .5, ease: 'power2.out' });
-    SFX.fanfare(.1);
     state.frame = (dt, t) => {
       Object.assign(cs(), gateWideCamera(pr.progress));
       state.skyWhite = gateWideLight(pr.progress);
@@ -290,9 +276,6 @@ export function makePhases() {
         if (!flashed.has(go.n) && amountOf(go.n) > .5) {
           flashed.add(go.n);
           setGateRevealed(go, true);   // 光の粒が扉を覆っている間に色を切り替える
-          SFX.sparkle(0, go.isSR ? 1500 : 1200);
-          if (go.isSR) SFX.ding(.02);
-          if (go.isSSR) SFX.swell(.7);
         }
       }
       // 虹の房の光柱と艶も、正体が現れてから
@@ -301,7 +284,6 @@ export function makePhases() {
       if (W.ssrSheen) W.ssrSheen.material.opacity = ssrShown * (.1 + Math.sin(t * 2.6) * .05);
       state.bloom = .4 + .14 * gateFlashAmount(pr.progress, GACHA.ssrGate);
     };
-    SFX.sparkle(.1, 1200);
     state.frame(0, 0);
     await tk.wait(GATE_PASS_TIMING.settle);
     if (tk.cancelled) return;
@@ -320,14 +302,11 @@ export function makePhases() {
     // 低い位置から見上げ、背景を空と雲にする。盤の下に白い切妻屋根が入る距離。
     // 太陽(-Z右上)が画角へ入ると盤面が逆光で潰れるので、右手前から左上を見上げる
     setCam(L.x + .85, L.y - 1.45, L.z + 2.9, L.x - .1, L.y + .12, L.z - .4, 40, .03);
-    SFX.tone(70, .5, 'sine', .35);
     tk.tw(cs(), { pz: L.z + 2.7, duration: .6, ease: 'none' });    // 点灯を待つ間のにじり寄り
     await tk.wait(.6);
     if (tk.cancelled) return;
     setStartLamp(true);
     state.bloom = .85;
-    SFX.clang();
-    SFX.ding(.04);
     await Promise.all([
       tk.tw(cs(), { fov: 36, duration: .12, ease: 'power3.out' }),
       tk.tw(state, { shake: .012, duration: .1 }),
@@ -363,7 +342,6 @@ export function makePhases() {
     setRaceDim(.34);
     state.bloom = .34;
     setCam(SSR_X, .95, .6, SSR_X, 1.55, -4.5, 46);
-    SFX.swell(.7);
     state.frame = (dt, t) => {
       const p = .6 + Math.sin(t * 5.2) * .1;
       if (go.glow) { go.glow.material.opacity = p; go.glow.scale.setScalar(4 + Math.sin(t * 5.2) * .25); }
@@ -397,8 +375,6 @@ export function makePhases() {
     W.hagaki.position.set(SSR_X, 1.25, -5.0);
     const go = W.gateObjs.find((o) => o.isSSR);
     const ssrIndex = W.gateObjs.indexOf(go);
-    SFX.clang();
-    SFX.thud(.05);
     // ゲート扉の開閉は90°まで（実物と同じ直角ストップ）
     for (const o of W.gateObjs) {
       const d = o === go ? 0 : .05;
@@ -418,8 +394,6 @@ export function makePhases() {
     state.cardShadow = .5;
     state.trail = 70;
     tk.tw(state, { streak: 1, duration: .5, ease: 'power2.in' });
-    SFX.gallop();
-    SFX.whoosh(1.2, .2);
     // 沿道を流れる紙吹雪（手前を高速で通過して速度感を出す / カメラ軸は外してレンズ直撃を避ける）
     W.confetti.place({ x: SSR_X - 1.5, y: 8, z: 15 }, { x: 5.5, y: 6, z: 30 });
     W.confetti.set(true);
@@ -442,7 +416,6 @@ export function makePhases() {
     };
     await tk.tw(W.hagaki.position, { z: 25, duration: 1.1, ease: 'power2.in' });
     if (tk.cancelled) return;
-    SFX.whoosh(.5);
     await UI.flash(.14, .6);
   });
 
@@ -461,7 +434,6 @@ export function makePhases() {
     });
     for (const line of GACHA.speechLines) {
       if (tk.cancelled) break;
-      SFX.sparkle(.05, 1400);
       await UI.animateSpeech(line, tk);
       if (tk.cancelled) break;
       const how = await Promise.race([tk.tap().then(() => 'tap'), tk.wait(3.0).then(() => 'auto')]);
@@ -501,7 +473,6 @@ export function makePhases() {
     // ハガキ全体（高さ1.48）が名前帯の上に収まる距離で止める。
     // 視線をやや下(1.2)に置いてカードを画面上寄りに配置
     setCam(0, 1.3, 3.4, 0, 1.2, 0, 38);
-    SFX.fanfare();
     UI.showRevealLabels(tk);
     // 登場: 小さく傾いた状態から弾むように収まり、背後で光輪が広がる（振り向きに見えるヨー回転はしない）
     W.hagaki.scale.setScalar(.5);
@@ -520,7 +491,6 @@ export function makePhases() {
     const exit = await Promise.race([tk.tap().then(() => 'tap'), tk.wait(30).then(() => 'timeout')]);
     if (tk.cancelled) return;
     state.revealExit = exit;
-    SFX.ding();
     await UI.flash(.16, .65, .1);
     UI.hideRevealLabels();
   });
