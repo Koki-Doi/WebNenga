@@ -9,7 +9,6 @@ import {
 } from './utils.js';
 
 import { MESSAGE_TEMPLATES } from './templates.js';
-import { markCreatedCard, syncCardAnalytics, trackPage } from './card-analytics.js';
 
 import {
   isHeifFile, convertHeifToBlob, normalizeForIOS,
@@ -136,7 +135,6 @@ export function initEditor() {
     document.documentElement.classList.add('editing-open');
     document.body.classList.add('editing-open');
     editorScroll.scrollTop = 0;
-    trackPage('editor_open');
   });
   function closeEditor() {
     overlay.setAttribute('aria-hidden','true');
@@ -189,7 +187,6 @@ export function initEditor() {
     currentTplId = t.id;
     inpMessage.value = t.text;
     applyPreviewAndURL();
-    trackPage('editor_template', { template_id: t.id });
     showToast(`繝・Φ繝励Ξ繝ｼ繝医・{t.label}縲阪ｒ驕ｩ逕ｨ縺励∪縺励◆`);
   });
 
@@ -256,8 +253,6 @@ export function initEditor() {
   };
 
   let applySeq = 0;
-  let userEdited = false;   // フォームを自分で操作したか（＝このカードの作成者か）
-  let currentCardId = null;
   const applyPreviewAndURLCore = async ()=>{
     const seq = ++applySeq;
     validateRequired();
@@ -287,21 +282,16 @@ export function initEditor() {
 
     const id  = await hashIdShort(address, sender, SHORT_ID_LEN);
     if (seq !== applySeq) return;
-    currentCardId = id;
-    // 共有リンクを開いただけ（bootFromHash）では記録せず、自分で入力した場合のみ作成者扱い
-    if (userEdited) markCreatedCard(id);
     const url = buildShareURL(dataObj, id);
 
     if (!csvOpen){
       if (history.replaceState) history.replaceState(null,'', url); else location.hash = url.split('#')[1];
       txtUrl.value = url;
-      syncCardAnalytics({ allowStart: false });
     }
   };
   const applyPreviewAndURL = debounce(applyPreviewAndURLCore, 80);
 
   ['input','change'].forEach(type=>{
-    [inpAddress, inpHonor, inpSender, inpMessage].forEach(el => el.addEventListener(type, ()=>{ userEdited = true; }));
     inpAddress.addEventListener(type, applyPreviewAndURL);
     inpHonor.addEventListener(type, applyPreviewAndURL);
     inpSender.addEventListener(type, applyPreviewAndURL);
@@ -320,7 +310,6 @@ export function initEditor() {
     // 繝励Ξ繝薙Η繝ｼ & 蜈ｱ譛牙酔譎よ峩譁ｰ・亥・髢九ヵ繧｡繧､繝ｫ縺ｪ縺ｮ縺ｧ縺昴・縺ｾ縺ｾ螳牙ｮ啅RL・・
     setBackground(src, src);
     showToast('サンプル背景を適用しました');
-    trackPage('editor_background', { bg_url: src });
     e.stopPropagation();
   });
 
@@ -344,7 +333,6 @@ export function initEditor() {
 
     const applyLocalOnlyBackground = () => {
       setBackground(currentObjUrl, dataURL);
-      trackPage('bg_upload_result', { result: 'data_url_fallback' });
       if (!uploadFallbackNotified) {
         showToast('外部ストレージに接続できないため、画像をデータURLとして共有に埋め込みます');
         uploadFallbackNotified = true;
@@ -364,7 +352,6 @@ export function initEditor() {
         // 謌仙粥 竊・蜈ｬ髢偽RL譖ｴ譁ｰ & 繝励Ξ繝薙Η繝ｼ繧ょｮ牙ｮ啅RL縺ｸ
         setBackground(publicUrl, publicUrl);
         showToast('背景をアップロードしてURLを更新しました');
-        trackPage('bg_upload_result', { result: 'uploaded' });
       } catch (err) {
         console.error('Upload failed', err);
         remoteUploadDisabled = true;
@@ -375,15 +362,10 @@ export function initEditor() {
   inpBgFile?.addEventListener('change', async ()=>{
     updateBgFileVisualState();
     let f = inpBgFile.files?.[0]; if(!f) return;
-    trackPage('editor_background', { bg_type: 'upload' });
 
     // HEIF 竊・JPEG 螟画鋤・亥ｿ・ｦ√↑蝣ｴ蜷医・縺ｿ・・
     try { if (isHeifFile(f)) f = await convertHeifToBlob(f); }
-    catch {
-      showToast('HEIFの変換に失敗しました');
-      trackPage('bg_upload_result', { result: 'heif_failed' });
-      return;
-    }
+    catch { showToast('HEIFの変換に失敗しました'); return; }
 
     // EXIF縺ｮ蜷代″陬懈ｭ｣莉倥″縺ｧ螳牙・縺ｫ隱ｭ縺ｿ霎ｼ縺ｿ・・OS蟇ｾ遲厄ｼ・
     let srcURL;
@@ -427,9 +409,7 @@ export function initEditor() {
   // ===== URL繧ｳ繝斐・ =====
   btnCopy?.addEventListener('click', async ()=>{
     await applyPreviewAndURL.flush?.();
-    markCreatedCard(currentCardId);
     const ok = await tryCopy(txtUrl.value);
-    trackPage('share_link', { method: ok ? 'copy' : 'copy_failed', url_length: txtUrl.value.length });
     btnCopy.textContent = ok ? 'コピー成功' : 'コピー失敗';
     setTimeout(()=> (btnCopy.textContent='URLをコピー'), 1200);
     if (ok) showToast('URLをコピーしました');
@@ -443,15 +423,9 @@ export function initEditor() {
     btnShare.classList.add('is-available');
     btnShare.addEventListener('click', async ()=>{
       await applyPreviewAndURL.flush?.();
-      markCreatedCard(currentCardId);
-      const urlLength = txtUrl.value.length;
       try {
         await navigator.share({ title: 'Web年賀状', text: '年賀状が届いています', url: txtUrl.value });
-        trackPage('share_link', { method: 'share', url_length: urlLength });
-      } catch (err) {
-        // ユーザーによるキャンセルは画面上は無視し、計測だけ区別する
-        trackPage('share_link', { method: err?.name === 'AbortError' ? 'share_cancel' : 'share_failed', url_length: urlLength });
-      }
+      } catch { /* ユーザーによるキャンセルは無視 */ }
     });
   }
 
@@ -506,13 +480,7 @@ export function initEditor() {
     csvPreview.value='';
     const f = csvFile.files?.[0]; if (!f) return;
     if (!/\.csv$/i.test(f.name) && (f.type && f.type.indexOf('csv') === -1)) { showToast('CSVファイルを選択してください'); return; }
-    let rows;
-    try { rows = parseCSV(await f.text()); }
-    catch (error) {
-      csvSummary.textContent = 'CSVを読み込めませんでした';
-      showToast(error.message || 'CSVファイルを確認してください');
-      return;
-    }
+    const text = await f.text(); const rows = parseCSV(text);
     if (!rows.length) { showToast('CSVの読み込みに失敗しました'); return; }
     csvSummary.textContent = `${f.name}（${rows.length} 件）を読み込みました`;
     csvPreview.value = rows.slice(0, 10).map(r => r.join(',')).join('\n');
@@ -521,22 +489,15 @@ export function initEditor() {
 
   csvGenerate?.addEventListener('click', async ()=>{
     const f = csvFile?.files?.[0]; if (!f) { showToast('CSVを選択してください'); return; }
-    csvGenerate.disabled = true;
-    try {
-      const counts = await handleCsvGenerate({
-        file: f,
-        currentBgUrl: stableBgUrl,                  // 蜈ｱ譛峨・蟶ｸ縺ｫ螳牙ｮ啅RL
-        buildUrl: (obj, id)=>{
-          const enc  = encodeData(obj);
-          const base = location.href.split('#')[0];
-          return `${base}#id=${id}&data=${enc}`;
-        },
-      });
-      trackPage('csv_generate', { result: 'ok', rows_ok: counts?.ok ?? 0, rows_ng: counts?.ng ?? 0 });
-    } catch (error) {
-      showToast(error.message || 'CSVの生成に失敗しました');
-      trackPage('csv_generate', { result: 'failed' });
-    } finally { csvGenerate.disabled = false; }
+    await handleCsvGenerate({
+      file: f,
+      currentBgUrl: stableBgUrl,                  // 蜈ｱ譛峨・蟶ｸ縺ｫ螳牙ｮ啅RL
+      buildUrl: (obj, id)=>{
+        const enc  = encodeData(obj);
+        const base = location.href.split('#')[0];
+        return `${base}#id=${id}&data=${enc}`;
+      },
+    });
   });
 }
 

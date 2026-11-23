@@ -28,65 +28,18 @@
   <meta name="theme-color" content="#f2efe9" />
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%8E%8D%3C/text%3E%3C/svg%3E" />
   <link rel="stylesheet" href="nenga.css" />
-  <link rel="stylesheet" href="gacha.css" />
   <link rel="stylesheet" href="https://unpkg.com/cropperjs@1.6.2/dist/cropper.min.css">
-  <!-- 初期ロード中インジケータ（外部CSS/JSの到着に依存しないようインライン記述。
-       0.6秒の遅延フェードインなので、即ロードできた場合は視認されない） -->
-  <style>
-    #page-loading{
-      position: fixed; inset: 0; z-index: 80;
-      display: flex; align-items: center; justify-content: center;
-      pointer-events: none;
-      opacity: 0;
-      animation: pglIn .4s ease .6s forwards;
-    }
-    #page-loading.is-done{ animation: none; transition: opacity .25s ease; }
-    .pgl-box{
-      display: flex; flex-direction: column; align-items: center; gap: 12px;
-      color: #4b5563; font-weight: 700; font-size: 14px; letter-spacing: .12em;
-      font-family: "Noto Sans JP", system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Hiragino Kaku Gothic ProN", "Meiryo", sans-serif;
-      text-shadow: 0 1px 0 rgba(255,255,255,.8);
-    }
-    .pgl-spin{
-      width: 38px; height: 38px; border-radius: 50%; box-sizing: border-box;
-      border: 4px solid rgba(199,0,30,.15);
-      border-top-color: #c7001e;
-      animation: pglSpin .8s linear infinite;
-    }
-    @keyframes pglSpin{ to{ transform: rotate(360deg); } }
-    @keyframes pglIn{ to{ opacity: 1; } }
-  </style>
-  <!-- 改行位置の差異を抑えるため同一フォントを読み込み（丸ゴ/筆文字はガチャ演出用） -->
-  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&family=M+PLUS+Rounded+1c:wght@700;800;900&family=Yuji+Boku&display=swap" rel="stylesheet">
-  <!-- ガチャ演出（ウマ娘パロディ）用: three.js / gsap を CDN から解決 -->
-  <script type="importmap">
-  {
-    "imports": {
-      "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.min.js",
-      "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/",
-      "gsap": "https://cdn.jsdelivr.net/npm/gsap@3.12.5/index.js"
-    }
-  }
-  </script>
+  <!-- 改行位置の差異を抑えるため同一フォントを読み込み -->
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&display=swap" rel="stylesheet">
   
   <!-- Google tag (gtag.js) -->
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-8ZP24N3HRZ"></script>
   <script>
     window.dataLayer = window.dataLayer || [];
     function gtag(){dataLayer.push(arguments);}
-    window.nengaAnalyticsDisabled = !/^https?:$/.test(location.protocol)
-      || ['localhost', '127.0.0.1', '[::1]'].includes(location.hostname);
-    if (!window.nengaAnalyticsDisabled) {
-      gtag('js', new Date());
-      gtag('config', 'G-8ZP24N3HRZ', {
-        page_location: location.origin + location.pathname,
-        page_referrer: '',
-        page_title: 'Web年賀状'
-      });
-      const tag = document.createElement('script');
-      tag.async = true;
-      tag.src = 'https://www.googletagmanager.com/gtag/js?id=G-8ZP24N3HRZ';
-      document.head.appendChild(tag);
-    }
+    gtag('js', new Date());
+
+    gtag('config', 'G-8ZP24N3HRZ');
   </script>
   
 </head>
@@ -121,11 +74,6 @@
         <p class="greeting-message" id="greeting-body" data-print-field="greeting-body">謹んで新春のお慶びを申し上げます。<br>旧年中は格別のご高配を賜り厚く御礼申し上げます。<br>本年もご期待に沿えるよう精進してまいります。</p>
       </section>
     </div>
-  </div>
-
-  <!-- 初期ロード中インジケータ（カード表示開始時に main.js が除去） -->
-  <div id="page-loading">
-    <div class="pgl-box" role="status"><i class="pgl-spin" aria-hidden="true"></i><span>年賀状を準備中…</span></div>
   </div>
 
   <!-- 印刷専用テンプレート（静的複製用） -->
@@ -321,12 +269,38 @@
   <script type="module" src="./js/position-controls.js"></script>
   <!-- 軽量オートフィット（本文変更時のみ計測／リサイズは比例適用） -->
   <script type="module" src="./js/message-autofit-lite.js"></script>
-  <!-- GA4: カードID・宛名・差出人・本文付きの開封/ガチャ計測 -->
-  <script type="module" src="./js/card-analytics.js"></script>
-  <!-- 年賀状ガチャ（ウマ娘パロディ）: 初回の裏面タップを横取りして演出を挟む -->
-  <script type="module" src="./js/gacha/gacha-boot.js"></script>
   
+  <script>
+  // イベント送信ヘルパ
+  function track(eventName, params = {}) {
+    if (typeof gtag === "function") {
+      gtag("event", eventName, params);
+    }
+  }
 
+  // 例：編集開始ボタン（#startBtn）を押したら計測
+  document.addEventListener("DOMContentLoaded", () => {
+    const startBtn = document.querySelector("#startBtn");
+    if (startBtn) {
+      startBtn.addEventListener("click", () => {
+        track("start_edit");
+      });
+    }
+  });
+
+  // 例：作成完了時に呼ぶ関数（生成完了のタイミングで呼べ）
+  function onCreateComplete(templateName, renderMs) {
+    track("create_complete", {
+      template: templateName,
+      render_ms: renderMs
+    });
+  }
+
+  // 例：共有ボタン（#shareBtn）を押したら計測
+  function onShare(method) {
+    track("share_click", { method }); // method: "webshare" / "clipboard" など
+  }
+</script>
 
 </body>
 </html>
